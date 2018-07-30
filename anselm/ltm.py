@@ -72,7 +72,7 @@ class LongTermMemory(System):
             if mp.id and mp.key == "mpdoc":
                 doc = self.ltm_db[mp.id]
                 self.stm_chan.basic_publish(exchange='stm',
-                                            routing_key='stm.build.database',
+                                            routing_key='stm.insert.document',
                                             body=json.dumps(doc))
             else:
                 self.log.info(

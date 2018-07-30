@@ -50,13 +50,15 @@ class ShortTermMemory(System):
     def dispatch(self, ch, method, props, body):
         self.log.info("start dispatch with routing key: {}".format(method.routing_key))
 
-        if method.routing_key == "stm.build.database":
+        if method.routing_key == "stm.insert.document":
             self.log.info("found case fore routing key"
             doc = json.loads(body)
             self.insert_doc(doc)
 
     def init_stm(self):
         self.stm_db = self.stm['mp_def']
+        self.exchange_db = self.stm['exchange']
+
         self.log.info("generate database")
         self.doc_coll = self.stm_db['doc']
         self.log.info("generate doc collection")
@@ -64,9 +66,17 @@ class ShortTermMemory(System):
 
     def insert_doc(self, doc):
         ret = self.doc_coll.find({'_id': doc['_id'], '_rev': doc['_rev']})
+
         if ret.count() == 0:
             res = self.doc_coll.insert_one(doc)
             self.log.info("insert with result: {}".format(res))
 
         if ret.count() == 1:
             self.log.info("doc with same _id and _rev already exists")
+
+    def build_api(self, id):
+        doc = self.doc_coll.find({'_id': id})
+        if doc.count() == 1:
+            self.log.info("found document, start building collections")
+            # collection with id to exchange database
+            self.exchange_db[id].insert_one({Time:{Type:"start", Value:10}})
