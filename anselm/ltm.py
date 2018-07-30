@@ -3,7 +3,8 @@ from anselm.system import System
 import json
 import couchdb
 import pika
-import coloredlogs, logging
+import coloredlogs
+import logging
 
 
 class LongTermMemory(System):
@@ -23,7 +24,8 @@ class LongTermMemory(System):
         self.init_msg_consume()
 
     def dispatch(self, ch, method, props, body):
-        self.log.info("here comes dispatch with routing key: {}".format(method.routing_key))
+        self.log.info(
+            "here comes dispatch with routing key: {}".format(method.routing_key))
         if method.routing_key == "ltm.all":
             self.get_mpd()
 
@@ -31,7 +33,7 @@ class LongTermMemory(System):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
         chan.exchange_declare(exchange='stm',
-                            exchange_type='topic')
+                              exchange_type='topic')
         self.stm_conn = conn
         self.stm_chan = chan
 
@@ -39,34 +41,39 @@ class LongTermMemory(System):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
         chan.exchange_declare(exchange='ltm',
-                                 exchange_type='topic')
+                              exchange_type='topic')
 
         result = chan.queue_declare(exclusive=True)
         queue_name = result.method.queue
         chan.queue_bind(exchange='ltm',
-                            routing_key='ltm.#',
-                            queue=queue_name)
+                        routing_key='ltm.#',
+                        queue=queue_name)
 
         chan.basic_consume(self.dispatch,
-                              queue=queue_name,
-                              no_ack=True)
+                           queue=queue_name,
+                           no_ack=True)
 
         chan.start_consuming()
 
     def init_ltm(self):
-        couch_dict = self.config['couchdb']
-        port = couch_dict['port']
-        host = couch_dict['host']
+        ltm_dict = self.config['couchdb']
+        port = ltm_dict['port']
+        host = ltm_dict['host']
         url = 'http://{}:{}/'.format(host, port)
 
+        self.ltm_dict = ltm_dict
         self.ltm = couchdb.Server(url)
+        self.ltm_db = self.ltm[self.ltm_dict['database']]
         self.log.info("long-term memory system ok")
 
     def get_mpd(self):
-        db = self.ltm[self.config['couchdb']['database']]
-        view = self.config['couchdb']['view']['mpd']
-
-        for mp in db.view(view):
-            self.stm_chan.basic_publish(exchange='stm',
-                                        routing_key='stm.push_mp',
-                                        body=json.dumps(mp))
+        view = self.ltm_dict['view']['mpd']
+        for mp in self.ltm_db.view(view):
+            if mp.id and mp.key == "mpdoc":
+                doc = self.ltm_db[mp.id]
+                self.stm_chan.basic_publish(exchange='stm',
+                                            routing_key='stm.build.database',
+                                            body=json.dumps(doc))
+            else:
+                self.log.info(
+                    "document with id: {} will not be published".format(mp.id))

@@ -36,6 +36,14 @@ class Anselm(System):
         self.ltm_conn = conn
         self.ltm_chan = chan
 
+    def init_stm_msg_prod(self):
+        conn = pika.BlockingConnection(self.msg_param)
+        chan = conn.channel()
+        chan.exchange_declare(exchange='stm',
+                            exchange_type='topic')
+        self.ltm_conn = conn
+        self.ltm_chan = chan
+
     def to_ltm(self):
         parser = argparse.ArgumentParser(
             description="checks if the systems are up")
