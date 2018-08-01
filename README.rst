@@ -12,7 +12,7 @@ requirements
 
 todo rabbitmq
 =============
-* prober shutdown
+* proper shutdown
 
 todo config
 ===========
@@ -24,6 +24,18 @@ todo config
 build api
 =========
 
-the idea is:
+Idea is:
 * make exchange, container etc. databases
 * collections with mp_def id
+
+exchange and insert_one
+=======================
+How to organize a fast write_to_exchange?
+
+Idea is:
+Don't search and replace if an entry already exist.
+Use ``insert_one`` regardless of already existing documents. Simply
+read out the last written document by ``db.coll.find().limit(1)``.
+But:
+This may become slow if N goes up (e.g. on setting pressure 
+processes N will be several 1000)

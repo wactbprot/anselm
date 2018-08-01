@@ -26,8 +26,8 @@ class LongTermMemory(System):
     def dispatch(self, ch, method, props, body):
         self.log.info(
             "here comes dispatch with routing key: {}".format(method.routing_key))
-        if method.routing_key == "ltm.all":
-            self.get_mpd()
+        if method.routing_key == "ltm.mp.start":
+            self.get_mp_defs()
 
     def init_stm_msg_prod(self):
         conn = pika.BlockingConnection(self.msg_param)
@@ -46,12 +46,12 @@ class LongTermMemory(System):
         result = chan.queue_declare(exclusive=True)
         queue_name = result.method.queue
         chan.queue_bind(exchange='ltm',
-                        routing_key='ltm.#',
+                        routing_key='ltm.*.*',
                         queue=queue_name)
 
         chan.basic_consume(self.dispatch,
                            queue=queue_name,
-                           no_ack=True)
+                           no_ack=False)
 
         chan.start_consuming()
 
@@ -66,7 +66,7 @@ class LongTermMemory(System):
         self.ltm_db = self.ltm[self.ltm_dict['database']]
         self.log.info("long-term memory system ok")
 
-    def get_mpd(self):
+    def get_mp_defs(self):
         view = self.ltm_dict['view']['mpd']
         for mp in self.ltm_db.view(view):
             if mp.id and mp.key == "mpdoc":

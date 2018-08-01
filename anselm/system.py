@@ -7,10 +7,11 @@ import coloredlogs, logging
 class System:
     """
     """
+    max_arg_len = 40
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.
-        Initializes sub systems
+        Initializes log system
         """
         # open and parse config file
         with open('anselm/config.json') as json_config_file:
