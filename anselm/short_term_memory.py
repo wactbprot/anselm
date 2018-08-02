@@ -7,7 +7,6 @@ import coloredlogs
 import logging
 import datetime
 
-
 class ShortTermMemory(System):
 
     def __init__(self):
@@ -19,28 +18,26 @@ class ShortTermMemory(System):
         self.stm_dict = stm_dict
         self.stm = MongoClient(stm_dict['host'], stm_dict['port'])
         self.init_stm()
-
         msg_dict = self.config['rabbitmq']
         self.msg_param = pika.ConnectionParameters(host=msg_dict['host'])
+        self.init_ltm_msg_prod()
         self.init_msg_consume()
 
+
+    def init_ltm_msg_prod(self):
+        conn = pika.BlockingConnection(self.msg_param)
+        chan = conn.channel()
+        chan.queue_declare(queue='ltm')
+        self.ltm_conn = conn
+        self.ltm_chan = chan
 
     def init_msg_consume(self):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
-        chan.exchange_declare(exchange='stm',
-                              exchange_type='topic')
-
-        result = chan.queue_declare(exclusive=True)
-        queue_name = result.method.queue
-
-        chan.queue_bind(exchange='stm',
-                        routing_key='stm.*.*',
-                        queue=queue_name)
-
+        chan.queue_declare(queue='stm')
         chan.basic_consume(self.dispatch,
-                           queue=queue_name,
-                           no_ack=False)
+                           queue='stm',
+                           no_ack=True)
 
         self.log.info("short-term memory system start consuming")
         chan.start_consuming()
@@ -48,29 +45,30 @@ class ShortTermMemory(System):
     def dispatch(self, ch, method, props, body):
         self.log.info("start dispatch with routing key: {}".format(method.routing_key))
         found = False
-        if method.routing_key == "stm.insert.document":
-            o = json.loads(body)
-            self.insert_source_doc(o)
+        res = json.loads(body)
+        do = res['do']
+        pl = res['payload']
+
+        if do == "insert_document":
+            self.insert_source_doc(pl)
             found=True
 
-        if method.routing_key == "stm.build.api":
-            o = json.loads(body)
-            self.build_api(o['id'])
+        if do == "build_api":
+            self.build_api(pl['id'])
             found=True
 
-        if method.routing_key == "stm.clear.all":
+        if do == "clear_all":
             self.clear_stm()
             found=True
 
-        if method.routing_key == "stm.read.exchange":
-            o = json.loads(body)
-            self.read_exchange(o['id'], o['find_set'])
+        if do == "read_exchange":
+            self.read_exchange(pl['id'], pl['find_set'])
             found=True
 
         if found:
             self.log.info("found branch for routing key")
         else:
-            self.log.error("no branch found for routing key: {}".format(method.routing_key))
+            self.log.error("no branch found for routing key: {}".format(do))
 
     def init_stm(self):
         """Generates the api databases and the source doc collection.
@@ -86,6 +84,7 @@ class ShortTermMemory(System):
 
         self.log.info("short-term memory system ok")
 
+
     def clear_stm(self):
         """
         Clears the stm by droping all databasese starting with ``mp_``.
@@ -98,7 +97,7 @@ class ShortTermMemory(System):
                 self.log.info("drop databes {}".format(database))
 
         self.log.info("amount of droped databases: {}".format(n))
-        
+
     def insert_source_doc(self, doc):
         ret = self.source_doc_coll.find({'_id': doc['_id'], '_rev': doc['_rev']})
 
@@ -116,25 +115,35 @@ class ShortTermMemory(System):
             d = datetime.datetime.now().isoformat().replace('T', ' ')
             self.write_exchange(id, {"StartTime":{"Type":"start", "Value":d}})
 
-            for i, entr in  enumerate(doc['Mp']['Container']):
+            for contno, entr in  enumerate(doc['Mp']['Container']):
                 title = entr['Title']
-                self.container_description_db[id].insert_one({'Description':entr['Description'], 'No':i, 'Title': title})
-                self.container_definition_db[id].insert_one({'Definition':entr['Definition'], 'No':i, 'Title': title})
-                self.container_element_db[id].insert_one({'Element':entr['Element'], 'No':i, 'Title': title})
-                self.container_ctrl_db[id].insert_one({'Ctrl':entr['Ctrl'], 'No':i, 'Title': title})
+                self.container_description_db[id].insert_one({'Description':entr['Description'], 'ContNo':contno, 'Title': title})
+                self.container_element_db[id].insert_one({'Element':entr['Element'], 'ContNo':contno, 'Title': title})
+                self.container_ctrl_db[id].insert_one({'Ctrl':entr['Ctrl'], 'ContNo':contno, 'Title': title})
 
+                definition = entr['Definition']
+                for serno, _ in enumerate(definition):
+                    for parno, _ in enumerate(definition[serno]):
+
+                        t = definition[serno][parno]
+                        t['ContNo'] = contno
+                        t['SerNo'] = serno
+                        t['ParNo'] = parno
+                        self.ltm_chan.basic_publish(exchange='',
+                                                    routing_key='ltm',
+                                                    body=json.dumps({'do':'provide_task', 'payload':t}))
         else:
             m = "can not find document with id: {}".format(id)
             self.log.error(m)
             sys.exit(m)
 
-    def write_exchange(self, id, doc):
-        self.exchange_db[id].insert_one(doc)
+    def write_exchange(self, mpid, doc):
+        self.exchange_db[mpid].insert_one(doc)
 
     def read_exchange(self, id, find_set):
         res = self.exchange_db[id].find(find_set)
         n = res.count()
-        if n > 0:
-            print(res[n-1])
+        if n == 1:
+            print(res[0])
         else:
             print("found nothing")

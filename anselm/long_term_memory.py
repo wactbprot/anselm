@@ -21,37 +21,43 @@ class LongTermMemory(System):
 
         self.log.info("long-term memory system start consuming")
         self.init_stm_msg_prod()
+        self.init_ltm_msg_prod()
         self.init_msg_consume()
 
     def dispatch(self, ch, method, props, body):
         self.log.info(
             "here comes dispatch with routing key: {}".format(method.routing_key))
-        if method.routing_key == "ltm.mp.start":
+        res = json.loads(body)
+        do = res['do']
+        pl = res['payload']
+        if do == "start":
             self.get_mp_defs()
 
     def init_stm_msg_prod(self):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
-        chan.exchange_declare(exchange='stm',
-                              exchange_type='topic')
+
+        chan.queue_declare(queue='stm')
+
         self.stm_conn = conn
         self.stm_chan = chan
+
+    def init_ltm_msg_prod(self):
+        conn = pika.BlockingConnection(self.msg_param)
+        chan = conn.channel()
+        chan.queue_declare(queue='ltm')
+        self.ltm_conn = conn
+        self.ltm_chan = chan
 
     def init_msg_consume(self):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
-        chan.exchange_declare(exchange='ltm',
-                              exchange_type='topic')
 
-        result = chan.queue_declare(exclusive=True)
-        queue_name = result.method.queue
-        chan.queue_bind(exchange='ltm',
-                        routing_key='ltm.*.*',
-                        queue=queue_name)
+        chan.queue_declare(queue='ltm')
 
         chan.basic_consume(self.dispatch,
-                           queue=queue_name,
-                           no_ack=False)
+                           queue='ltm',
+                           no_ack=True)
 
         chan.start_consuming()
 
@@ -71,9 +77,9 @@ class LongTermMemory(System):
         for mp in self.ltm_db.view(view):
             if mp.id and mp.key == "mpdoc":
                 doc = self.ltm_db[mp.id]
-                self.stm_chan.basic_publish(exchange='stm',
-                                            routing_key='stm.insert.document',
-                                            body=json.dumps(doc))
+                self.stm_chan.basic_publish(exchange='',
+                                            routing_key='stm',
+                                            body=json.dumps({'do':'insert_document', 'payload':doc}))
             else:
                 self.log.info(
                     "document with id: {} will not be published".format(mp.id))

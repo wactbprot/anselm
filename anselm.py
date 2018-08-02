@@ -37,19 +37,16 @@ class Anselm(System):
     def init_ltm_msg_prod(self):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
-        chan.exchange_declare(exchange='ltm',
-                            exchange_type='topic')
+        chan.queue_declare(queue='ltm')
         self.ltm_conn = conn
         self.ltm_chan = chan
 
     def init_stm_msg_prod(self):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
-        chan.exchange_declare(exchange='stm',
-                            exchange_type='topic')
+        chan.queue_declare(queue='stm')
         self.stm_conn = conn
         self.stm_chan = chan
-
 
     def start(self):
         """
@@ -60,9 +57,9 @@ class Anselm(System):
         parser = argparse.ArgumentParser(
             description="sends a all to ltm exchange")
 
-        self.ltm_chan.basic_publish(exchange='ltm',
-                                    routing_key='ltm.mp.start',
-                                    body='')
+        self.ltm_chan.basic_publish(exchange='',
+                                    routing_key='ltm',
+                                    body=json.dumps({'do':'start', 'payload':{}}))
 
         self.ltm_conn.close()
 
@@ -71,9 +68,9 @@ class Anselm(System):
         """
         parser = argparse.ArgumentParser(
             description="sends a clear.all to stm exchange")
-        self.ltm_chan.basic_publish(exchange='stm',
-                                    routing_key='stm.clear.all',
-                                    body='')
+        self.ltm_chan.basic_publish(exchange='',
+                                    routing_key='stm',
+                                    body=json.dumps({'do':'clear_all', 'payload':{}}))
         self.ltm_conn.close()
 
     def build_api_for(self):
@@ -84,9 +81,9 @@ class Anselm(System):
         arg = parser.parse_args(sys.argv[2:3])
 
         if len(arg.mpid) < self.max_arg_len:
-            self.stm_chan.basic_publish(exchange='stm',
-                                        routing_key='stm.build.api',
-                                        body=json.dumps({"id": arg.mpid}))
+            self.stm_chan.basic_publish(exchange='',
+                                        routing_key='stm',
+                                        body=json.dumps({'do':'build_api', 'payload':{"id": arg.mpid}}))
 
         self.stm_conn.close()
 
@@ -94,9 +91,9 @@ class Anselm(System):
         parser = argparse.ArgumentParser(
             description="read from exchange")
 
-        self.stm_chan.basic_publish(exchange='stm',
-                                    routing_key='stm.read.exchange',
-                                    body=json.dumps({"id":"mpd-ce3-calib", "find_set":{"StartTime.Type":"start"}}))
+        self.stm_chan.basic_publish(exchange='',
+                                    routing_key='stm',
+                                    body=json.dumps({'do':'read_exchange', 'payload':{"id":"mpd-ce3-calib", "find_set":{"StartTime.Type":"start"}}}))
 
         self.stm_conn.close()
 

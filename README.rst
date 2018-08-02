@@ -35,7 +35,11 @@ How to organize a fast write_to_exchange?
 Idea is:
 Don't search and replace if an entry already exist.
 Use ``insert_one`` regardless of already existing documents. Simply
-read out the last written document by ``db.coll.find().limit(1)``.
+read out the last written document by ``db.coll.find_one()[n-1]``.
+
 But:
-This may become slow if N goes up (e.g. on setting pressure 
+This may become slow if N goes up (e.g. on setting pressure
 processes N will be several 1000)
+
+Solution:
+``delete_many()`` *before* ``insert_one()``
