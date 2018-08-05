@@ -2,10 +2,6 @@ import sys
 from anselm.system import System
 from pymongo import MongoClient
 import json
-import pika
-import coloredlogs
-import logging
-import datetime
 
 class ShortTermMemory(System):
 
@@ -18,29 +14,11 @@ class ShortTermMemory(System):
         self.stm_dict = stm_dict
         self.stm = MongoClient(stm_dict['host'], stm_dict['port'])
         self.init_stm()
-        msg_dict = self.config['rabbitmq']
-        self.msg_param = pika.ConnectionParameters(host=msg_dict['host'])
+
         self.init_ltm_msg_prod()
-        self.init_msg_consume()
+        self.init_stm_msg_consume()
 
 
-    def init_ltm_msg_prod(self):
-        conn = pika.BlockingConnection(self.msg_param)
-        chan = conn.channel()
-        chan.queue_declare(queue='ltm')
-        self.ltm_conn = conn
-        self.ltm_chan = chan
-
-    def init_msg_consume(self):
-        conn = pika.BlockingConnection(self.msg_param)
-        chan = conn.channel()
-        chan.queue_declare(queue='stm')
-        chan.basic_consume(self.dispatch,
-                           queue='stm',
-                           no_ack=True)
-
-        self.log.info("short-term memory system start consuming")
-        chan.start_consuming()
 
     def dispatch(self, ch, method, props, body):
         self.log.info("start dispatch with routing key: {}".format(method.routing_key))
@@ -110,12 +88,19 @@ class ShortTermMemory(System):
 
     def build_api(self, id):
         doc = self.source_doc_coll.find_one({'_id': id})
-        if doc:
+        if doc and 'Mp' in doc:
+            mp = doc['Mp']
             self.log.info("found document, start building collections")
-            d = datetime.datetime.now().isoformat().replace('T', ' ')
-            self.write_exchange(id, {"StartTime":{"Type":"start", "Value":d}})
+            standard = mp['Standard']
+            mp_name = mp['Name']
+            # start with filling up exchange
+            self.write_exchange(id, {"StartTime":{"Type":"start", "Value":self.now()}})
 
-            for contno, entr in  enumerate(doc['Mp']['Container']):
+            if 'Exchange' in mp:
+                for _, entr in  enumerate(mp['Exchange']):
+                    self.write_exchange(id, entr)
+
+            for contno, entr in  enumerate(mp['Container']):
                 title = entr['Title']
                 self.container_description_db[id].insert_one({'Description':entr['Description'], 'ContNo':contno, 'Title': title})
                 self.container_element_db[id].insert_one({'Element':entr['Element'], 'ContNo':contno, 'Title': title})
@@ -129,13 +114,16 @@ class ShortTermMemory(System):
                         t['ContNo'] = contno
                         t['SerNo'] = serno
                         t['ParNo'] = parno
-                        self.ltm_chan.basic_publish(exchange='',
-                                                    routing_key='ltm',
-                                                    body=json.dumps({'do':'provide_task', 'payload':t}))
+                        t['MpName'] = mp_name
+                        t['Standard'] = standard
+
+                        self.ltm_pub(body_dict={'do':'provide_task', 'payload':t})
         else:
             m = "can not find document with id: {}".format(id)
             self.log.error(m)
             sys.exit(m)
+
+
 
     def write_exchange(self, mpid, doc):
         self.exchange_db[mpid].insert_one(doc)
