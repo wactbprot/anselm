@@ -18,9 +18,11 @@ class LongTermMemory(System):
     def dispatch(self, ch, method, props, body):
         res = json.loads(body)
         do = res['do']
-        pl = res['payload']
-        self.log.info("here comes dispatch do: {} and payload {}".format(do, pl))
+        if 'payload' in res:
+            pl = res['payload']
+
         if do == "start":
+            self.log.info("dispatch to do: {}".format(do))
             self.get_mp_defs()
 
 
@@ -40,7 +42,10 @@ class LongTermMemory(System):
         for mp in self.ltm_db.view(view):
             if mp.id and mp.key == "mpdoc":
                 doc = self.ltm_db[mp.id]
-                self.stm_pub(body_dict={'do':'insert_document', 'payload':doc})
+                self.stm_pub(body_dict={
+                            'do':'insert_document',
+                            'payload':doc}
+                            )
             else:
                 self.log.info(
                     "document with id: {} will not be published".format(mp.id))

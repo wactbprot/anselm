@@ -10,6 +10,20 @@ requirements
 * mongodb (short-term memory, stm)
 * rabbidmq (message broker, msg)
 
+opensuse specials
+=================
+
+$> zypper in rabbitmq-server
+$> zypper in rabbitmq-server-plugins
+$> rabbitmq-plugins enable rabbitmq_management
+
+/etc/hosts:
+hostname 127.0.0.1
+
+$> systemctl enable rabbitmq-server.service
+$> systemctl start rabbitmq-server.service
+
+
 todo rabbitmq
 =============
 * proper shutdown

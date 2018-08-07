@@ -25,7 +25,9 @@ class ShortTermMemory(System):
         found = False
         res = json.loads(body)
         do = res['do']
-        pl = res['payload']
+
+        if 'payload' in res:
+            pl = res['payload']
 
         if do == "insert_document":
             self.insert_source_doc(pl)
@@ -97,7 +99,7 @@ class ShortTermMemory(System):
             self.write_exchange(id, {"StartTime":{"Type":"start", "Value":self.now()}})
 
             if 'Exchange' in mp:
-                for _, entr in  enumerate(mp['Exchange']):
+                for _, entr in mp['Exchange'].items():
                     self.write_exchange(id, entr)
 
             for contno, entr in  enumerate(mp['Container']):
@@ -126,7 +128,8 @@ class ShortTermMemory(System):
 
 
     def write_exchange(self, mpid, doc):
-        self.exchange_db[mpid].insert_one(doc)
+        if isinstance(doc, dict):
+            self.exchange_db[mpid].insert_one(doc)
 
     def read_exchange(self, id, find_set):
         res = self.exchange_db[id].find(find_set)
