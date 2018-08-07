@@ -1,14 +1,16 @@
-"""brings all systems up and running"""
-
 import json
 import pika
-import coloredlogs, logging
+import coloredlogs
+import logging
 import datetime
+
 
 class System:
     """
     """
     max_arg_len = 40
+    log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
+
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.
@@ -16,55 +18,51 @@ class System:
         """
         # open and parse config file
         with open('anselm/config.json') as json_config_file:
-            config = json.load(json_config_file)
+            self.config = json.load(json_config_file)
 
-        self.config = config
         self.init_log()
-        msg_dict = self.config['rabbitmq']
-        self.msg_param = pika.ConnectionParameters(host=msg_dict['host'])
+        self.msg_param = pika.ConnectionParameters(
+            host=self.config['rabbitmq']['host'])
+        self.log.info("system __init__ complete")
 
     def init_log(self):
-        logger = logging.getLogger()
-        fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
-
+        self.log = logging.getLogger()
         coloredlogs.install(
-            fmt=fmt, level=self.config["loglevel"], logger=logger)
+            fmt=self.log_fmt, level=self.config["loglevel"], logger=self.log)
 
-        self.log = logger
         self.log.info("logging system online")
 
-    def init_stm_msg_prod(self):
+    def queue_factory(self, queue_name):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
-        chan.queue_declare(queue='stm')
+        chan.queue_declare(queue=queue_name)
+
+        return conn, chan
+
+    def init_stm_msg_prod(self):
+        conn, chan = self.queue_factory(queue_name='stm')
         self.stm_conn = conn
         self.stm_chan = chan
 
     def init_ltm_msg_prod(self):
-        conn = pika.BlockingConnection(self.msg_param)
-        chan = conn.channel()
-        chan.queue_declare(queue='ltm')
+        conn, chan = self.queue_factory(queue_name='ltm')
         self.ltm_conn = conn
         self.ltm_chan = chan
 
     def init_ltm_msg_consume(self):
-        conn = pika.BlockingConnection(self.msg_param)
-        chan = conn.channel()
-        chan.queue_declare(queue='ltm')
+        queue_name = 'ltm'
+        conn, chan = self.queue_factory(queue_name=queue_name)
         chan.basic_consume(self.dispatch,
-                           queue='ltm',
+                           queue=queue_name,
                            no_ack=True)
-
         chan.start_consuming()
 
     def init_stm_msg_consume(self):
-        conn = pika.BlockingConnection(self.msg_param)
-        chan = conn.channel()
-        chan.queue_declare(queue='stm')
+        queue_name = 'stm'
+        conn, chan = self.queue_factory(queue_name=queue_name)
         chan.basic_consume(self.dispatch,
-                           queue='stm',
+                           queue=queue_name,
                            no_ack=True)
-        self.log.info("short-term memory system start consuming")
         chan.start_consuming()
 
     def stm_pub(self, body_dict):
