@@ -1,0 +1,9 @@
+*.pyc
+/dist/
+docs/
+/*.egg-info
+.coverage
+lib/
+lib64
+pyvenv.cfg
+share/
