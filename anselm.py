@@ -57,6 +57,19 @@ class Anselm(System):
                     'payload':{}})
         self.ltm_conn.close()
 
+    def mp_to_ltm(self):
+        """
+        """
+        parser = argparse.ArgumentParser(
+            description="sends a mp from stm back to ltm")
+        parser.add_argument('mpid')
+        arg = parser.parse_args(sys.argv[2:3])
+
+        self.stm_pub(body_dict={
+                    'do':'mp_to_ltm',
+                    'payload':{'id': arg.mpid}})
+        self.ltm_conn.close()
+
     def build_api_for(self):
         parser = argparse.ArgumentParser(
             description="checks if the systems are up")
@@ -73,8 +86,7 @@ class Anselm(System):
         self.stm_conn.close()
 
     def read_exchange(self):
-        parser = argparse.ArgumentParser(
-            description="read from exchange")
+        parser = argparse.ArgumentParser(description="read from exchange")
 
         self.stm_publish(body_dict={
                         'do':'read_exchange',

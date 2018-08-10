@@ -32,6 +32,12 @@ class System:
 
         self.log.info("logging system online")
 
+    def connection_off(self):
+        print("------------------")
+        print("------------------")
+        print("------------------")
+        print("------------------")
+
     def queue_factory(self, queue_name):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()

@@ -45,6 +45,10 @@ class ShortTermMemory(System):
             self.read_exchange(pl['id'], pl['find_set'])
             found=True
 
+        if do == "mp_to_ltm":
+            self.mp_to_ltm(pl['id'])
+            found=True
+
         if found:
             self.log.info("found branch for routing key")
         else:
@@ -77,6 +81,14 @@ class ShortTermMemory(System):
                 self.log.info("drop databes {}".format(database))
 
         self.log.info("amount of droped databases: {}".format(n))
+
+    def mp_to_ltm(self, id):
+        doc = self.source_doc_coll.find({'_id': id})
+        n = doc.count()
+        self.ltm_pub(body_dict={
+                        'do':'store_doc',
+                        'payload': doc[n-1]
+                        })
 
     def insert_source_doc(self, doc):
         ret = self.source_doc_coll.find({'_id': doc['_id'], '_rev': doc['_rev']})
