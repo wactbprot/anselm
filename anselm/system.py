@@ -77,3 +77,19 @@ class System:
 
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')
+
+    def parse_body(self, body):
+        do, pl = None, None
+
+        try:
+            res = json.loads(body)
+        except ValueError as error:
+            raise ParseError(error)
+
+        if 'do' in res:
+            do = res['do']
+
+        if 'payload' in res:
+            pl = res['payload']
+
+        return do, pl

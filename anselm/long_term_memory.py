@@ -16,10 +16,8 @@ class LongTermMemory(System):
         self.init_ltm_msg_consume()
 
     def dispatch(self, ch, method, props, body):
-        res = json.loads(body)
-        do = res['do']
-        if 'payload' in res:
-            pl = res['payload']
+
+        do, pl = self.parse_body(body)
 
         if do == "start":
             self.log.info("dispatch to do: {}".format(do))

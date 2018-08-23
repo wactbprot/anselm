@@ -18,16 +18,9 @@ class ShortTermMemory(System):
         self.init_ltm_msg_prod()
         self.init_stm_msg_consume()
 
-
-
     def dispatch(self, ch, method, props, body):
-        self.log.info("start dispatch with routing key: {}".format(method.routing_key))
         found = False
-        res = json.loads(body)
-        do = res['do']
-
-        if 'payload' in res:
-            pl = res['payload']
+        do, pl = self.parse_body(body)
 
         if do == "insert_document":
             self.insert_source_doc(pl)
