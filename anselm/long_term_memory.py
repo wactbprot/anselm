@@ -13,15 +13,19 @@ class LongTermMemory(System):
         self.log.info("long-term memory system start consuming")
         self.init_stm_msg_prod()
         self.init_ltm_msg_prod()
-        self.init_ltm_msg_consume()
+        self.init_ltm_msg_consume(callback=self.dispatch)
 
     def dispatch(self, ch, method, props, body):
 
         do, pl = self.parse_body(body)
 
         if do == "start":
-            self.log.info("dispatch to do: {}".format(do))
             self.get_mp_defs()
+
+        if do == "store_doc":
+            self.store_doc(pl)
+
+        self.log.info("dispatch to do: {}".format(do))
 
 
     def init_ltm(self):
@@ -33,7 +37,18 @@ class LongTermMemory(System):
         self.ltm_dict = ltm_dict
         self.ltm = couchdb.Server(url)
         self.ltm_db = self.ltm[self.ltm_dict['database']]
+        self.ltm_db_sav = self.ltm["{}_sav".format(self.ltm_dict['database'])]
         self.log.info("long-term memory system ok")
+
+    def store_doc(self, doc):
+        id = doc['_id']
+        dbdoc = self.ltm_db_sav[id]
+        if dbdoc:
+            doc['_rev'] = dbdoc['_rev']
+        else:
+            doc.pop('_rev', None)
+
+        self.ltm_db_sav.save(doc)
 
     def get_mp_defs(self):
         view = self.ltm_dict['view']['mpd']
