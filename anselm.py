@@ -7,6 +7,9 @@ from anselm.system import System
 class Anselm(System):
     """
     https://chase-seibert.github.io/blog/2014/03/21/python-multilevel-argparse.html
+
+
+    always talk to short-term-memory, if there is somthing not in stm try to remember
     """
     def __init__(self):
         super().__init__()
@@ -38,10 +41,9 @@ class Anselm(System):
     def start(self):
         """
         """
-        parser = argparse.ArgumentParser(
-            description="sends a all to ltm exchange")
-
-        self.ltm_pub(body_dict={
+       
+        ## dont work, see tagline
+        self.stm_pub(body_dict={
                     'do':'start',
                     'payload':{}
                     })
@@ -50,45 +52,59 @@ class Anselm(System):
     def clear_stm(self):
         """
         """
-        parser = argparse.ArgumentParser(
-            description="sends a clear.all to stm exchange")
+        
         self.stm_pub(body_dict={
                     'do':'clear_all',
                     'payload':{}})
-        self.ltm_conn.close()
+        self.stm_conn.close()
 
-    def mp_to_ltm(self):
+    
+
+    def build_mp_db_for(self):
         """
+        usage:
+
+        > python anselm build_mp_db_for mpid
+
         """
         parser = argparse.ArgumentParser(
-            description="sends a mp from stm back to ltm")
-        parser.add_argument('mpid')
-        arg = parser.parse_args(sys.argv[2:3])
-
-        self.stm_pub(body_dict={
-                    'do':'mp_to_ltm',
-                    'payload':{'id': arg.mpid}})
-        self.ltm_conn.close()
-
-    def build_api_for(self):
-        parser = argparse.ArgumentParser(
-            description="checks if the systems are up")
+            description="builds the api for the mp given by id")
 
         parser.add_argument('mpid')
         arg = parser.parse_args(sys.argv[2:3])
 
-        if len(arg.mpid) < self.max_arg_len:
+        if len(arg.calid) < self.max_arg_len:
             self.stm_pub(body_dict={
-                        'do':'build_api',
+                        'do':'build_mp_db',
                         'payload':{"id": arg.mpid}
                         })
 
         self.stm_conn.close()
 
-    def read_exchange(self):
-        parser = argparse.ArgumentParser(description="read from exchange")
+    def build_cal_mp_for(self):
+        """
+        usage:
 
-        self.stm_publish(body_dict={
+        > python anselm provide_excahnge_for calid
+        
+        """
+        parser = argparse.ArgumentParser(
+            description="builds the api for the mp given by id")
+
+        parser.add_argument('calid')
+        arg = parser.parse_args(sys.argv[2:3])
+
+        if len(arg.calid) < self.max_arg_len:
+            self.stm_pub(body_dict={
+                        'do':'build_cal_db',
+                        'payload':{"id": arg.calid}
+                        })
+
+        self.stm_conn.close()
+
+    def read_exchange(self):
+       
+        self.stm_pub(body_dict={
                         'do':'read_exchange',
                         'payload':{"id":"mpd-ce3-calib", "find_set":{"StartTime.Type":"start"}}
                         })

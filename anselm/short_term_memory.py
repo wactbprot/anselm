@@ -15,8 +15,8 @@ class ShortTermMemory(System):
         self.stm = MongoClient(stm_dict['host'], stm_dict['port'])
         self.init_stm()
 
-        self.init_ltm_msg_prod()
-        self.init_stm_msg_consume()
+        self.init_ctrl_msg_prod()
+        self.init_stm_msg_consume(callback=self.dispatch)
 
 
 
@@ -29,12 +29,12 @@ class ShortTermMemory(System):
         if 'payload' in res:
             pl = res['payload']
 
-        if do == "insert_document":
-            self.insert_source_doc(pl)
+        if do == "insert_mp_doc":
+            self.insert_mp_doc(pl)
             found=True
 
-        if do == "build_api":
-            self.build_api(pl['id'])
+        if do == "build_mp_db":
+            self.build_mp_db(pl['id'])
             found=True
 
         if do == "clear_all":
@@ -63,8 +63,8 @@ class ShortTermMemory(System):
         self.container_element_db = self.stm['mp_container_element']
         self.container_ctrl_db = self.stm['mp_container_ctrl']
 
-        self.stm_source_db = self.stm['mp_def']
-        self.source_doc_coll = self.stm_source_db['source_doc']
+        self.stm_mp_db = self.stm['mp_def']
+        self.mp_doc_coll = self.stm_mp_db['mp_doc']
 
         self.log.info("short-term memory system ok")
 
@@ -83,25 +83,31 @@ class ShortTermMemory(System):
         self.log.info("amount of droped databases: {}".format(n))
 
     def mp_to_ltm(self, id):
-        doc = self.source_doc_coll.find({'_id': id})
+        doc = self.mp_doc_coll.find({'_id': id})
         n = doc.count()
         self.ltm_pub(body_dict={
                         'do':'store_doc',
                         'payload': doc[n-1]
                         })
 
-    def insert_source_doc(self, doc):
-        ret = self.source_doc_coll.find({'_id': doc['_id'], '_rev': doc['_rev']})
+    def insert_mp_doc(self, doc):
+        ret = self.mp_doc_coll.find({'_id': doc['_id'], '_rev': doc['_rev']})
 
         if ret.count() == 0:
-            res = self.source_doc_coll.insert_one(doc)
+            res = self.mp_doc_coll.insert_one(doc)
             self.log.info("insert with result: {}".format(res))
 
         if ret.count() == 1:
             self.log.info("doc with same _id and _rev already exists")
 
-    def build_api(self, id):
-        doc = self.source_doc_coll.find_one({'_id': id})
+        self.ctrl_pub(body_dict={
+            'source':'ltm'
+            'msg': 'insert_mp_doc_comlete',
+            'payload':doc['_id']
+        })
+
+    def build_mp_db(self, id):
+        doc = self.mp_doc_coll.find_one({'_id': id})
         if doc and 'Mp' in doc:
             mp = doc['Mp']
             self.log.info("found document, start building collections")
@@ -133,6 +139,7 @@ class ShortTermMemory(System):
 
                         self.ltm_pub(body_dict={'do':'provide_task', 'payload':t})
         else:
+
             m = "can not find document with id: {}".format(id)
             self.log.error(m)
             sys.exit(m)

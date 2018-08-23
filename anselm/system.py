@@ -32,12 +32,7 @@ class System:
 
         self.log.info("logging system online")
 
-    def connection_off(self):
-        print("------------------")
-        print("------------------")
-        print("------------------")
-        print("------------------")
-
+    
     def queue_factory(self, queue_name):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
@@ -55,18 +50,32 @@ class System:
         self.ltm_conn = conn
         self.ltm_chan = chan
 
-    def init_ltm_msg_consume(self):
+    def init_ctrl_msg_prod(self):
+        conn, chan = self.queue_factory(queue_name='ctrl')
+        self.ltm_conn = conn
+        self.ltm_chan = chan
+
+    def init_ltm_msg_consume(self, callback):
         queue_name = 'ltm'
-        conn, chan = self.queue_factory(queue_name=queue_name)
-        chan.basic_consume(self.dispatch,
+        _, chan = self.queue_factory(queue_name=queue_name)
+        chan.basic_consume(callback,
                            queue=queue_name,
                            no_ack=True)
         chan.start_consuming()
 
-    def init_stm_msg_consume(self):
+    def init_ctrl_msg_consume(self, callback):
+        queue_name = 'ctrl'
+        _, chan = self.queue_factory(queue_name=queue_name)
+        chan.basic_consume(callback,
+                           queue=queue_name,
+                           no_ack=True)
+        chan.start_consuming()
+
+
+    def init_stm_msg_consume(self, callback):
         queue_name = 'stm'
-        conn, chan = self.queue_factory(queue_name=queue_name)
-        chan.basic_consume(self.dispatch,
+        _, chan = self.queue_factory(queue_name=queue_name)
+        chan.basic_consume(callback,
                            queue=queue_name,
                            no_ack=True)
         chan.start_consuming()
@@ -74,6 +83,11 @@ class System:
     def stm_pub(self, body_dict):
         self.stm_chan.basic_publish(exchange='',
                                     routing_key='stm',
+                                    body=json.dumps(body_dict))
+
+    def ctrl_pub(self, body_dict):
+        self.stm_chan.basic_publish(exchange='',
+                                    routing_key='ctrl',
                                     body=json.dumps(body_dict))
 
     def ltm_pub(self, body_dict):

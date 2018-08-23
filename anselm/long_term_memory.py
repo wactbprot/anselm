@@ -13,7 +13,7 @@ class LongTermMemory(System):
         self.log.info("long-term memory system start consuming")
         self.init_stm_msg_prod()
         self.init_ltm_msg_prod()
-        self.init_ltm_msg_consume()
+        self.init_ltm_msg_consume(callback=self.dispatch)
 
     def dispatch(self, ch, method, props, body):
         res = json.loads(body)
