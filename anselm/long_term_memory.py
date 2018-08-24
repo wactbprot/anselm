@@ -21,12 +21,18 @@ class LongTermMemory(System):
 
         if 'payload' in res:
             pl = res['payload']
-            found = True
-
+            
         if do == "get_mps":
             self.get_mps()
             found = True
-
+        
+        if do == "get_auxobj":
+            if 'id' in pl:
+                self.get_auxobj(pl['id'])
+            else:
+                self.log.error("payload contains no id")
+            found = True
+        
         if do == "store_doc":
             self.store_doc(pl)
             found = True
@@ -70,3 +76,16 @@ class LongTermMemory(System):
             else:
                 self.log.info(
                     "document with id: {} will not be published".format(mp.id))
+
+    def get_auxobj(self, id):
+        doc = self.ltm_db[id]
+        if doc:
+            self.ctrl_pub(body_dict={
+                        'contains':'auxobj',
+                        'source':'ltm',
+                        'payload': doc}
+                        )
+        
+        else:
+            self.log.info(
+                "document with id: {} will not found".format(id))

@@ -33,11 +33,19 @@ class ShortTermMemory(System):
             self.insert_mp_doc(pl)
             found=True
 
+        if do == "insert_auxobj_doc":
+            self.insert_auxobj_doc(pl)
+            found=True
+
         if do == "build_mp_db":
             self.build_mp_db(pl['id'])
             found=True
-
-        if do == "clear_all":
+        
+        if do == "build_auxobj_db":
+            self.build_auxobj_db(pl['id'])
+            found=True
+        
+        if do == "clear_stm":
             self.clear_stm()
             found=True
 
@@ -57,15 +65,18 @@ class ShortTermMemory(System):
     def init_stm(self):
         """Generates the api databases and the source doc collection.
         """
-        self.exchange_db = self.stm['mp_exchange']
-        self.container_description_db = self.stm['mp_container_description']
-        self.container_definition_db = self.stm['mp_container_definition']
-        self.container_element_db = self.stm['mp_container_element']
-        self.container_ctrl_db = self.stm['mp_container_ctrl']
+        self.mp_container_db = self.stm['mp_exchange']
+        self.mp_container_description_db = self.stm['mp_container_description']
+        self.mp_container_definition_db = self.stm['mp_container_definition']
+        self.mp_container_element_db = self.stm['mp_container_element']
+        self.mp_container_ctrl_db = self.stm['mp_container_ctrl']
 
-        self.stm_mp_db = self.stm['mp_def']
+        self.stm_mp_db = self.stm['mp']
         self.mp_doc_coll = self.stm_mp_db['mp_doc']
-
+        
+        self.stm_auxobj_db = self.stm['auxobj']
+        self.auxobj_doc_coll = self.stm_auxobj_db['auxobj_doc']
+        
         self.log.info("short-term memory system ok")
 
 
@@ -105,6 +116,38 @@ class ShortTermMemory(System):
             'msg': 'insert_mp_doc_complete',
             'payload':{'id': doc['_id']}
         })
+    
+    def insert_auxobj_doc(self, doc):
+        
+        if 'AuxObject' in doc:
+            ret = self.auxobj_doc_coll.find({'_id': doc['_id'], '_rev': doc['_rev']})
+
+            if ret.count() == 0:
+                res = self.auxobj_doc_coll.insert_one(doc)
+                self.log.info("insert with result: {}".format(res))
+
+            if ret.count() == 1:
+                self.log.info("doc with same _id and _rev already exists")
+
+            self.ctrl_pub(body_dict={
+                'source':'stm',
+                'msg': 'insert_auxobj_doc_complete',
+                'payload':{'id': doc['_id']}
+            })
+        else:
+            self.log.error("document is not an AuxObject")
+
+    def build_auxobj_db(self, id):
+        doc = self.auxobj_doc_coll.find_one({'_id': id})
+        doc = doc['AuxObject']
+
+        if 'Default' in doc:
+            defaults = doc['default']
+        if 'Task' in doc:
+            tasks = doc['Task']
+
+        #for ...
+        #    self.replace_defaults(task, defaults)             
 
     def build_mp_db(self, id):
         doc = self.mp_doc_coll.find_one({'_id': id})
@@ -131,13 +174,13 @@ class ShortTermMemory(System):
             for contno, entr in  enumerate(mp['Container']):
                 title = entr['Title']
                 
-                self.container_description_db[id].insert_one({'Description':entr['Description'], 'ContNo':contno, 'Title': title})
-                self.container_ctrl_db[id].insert_one({'Ctrl':entr['Ctrl'], 'ContNo':contno, 'Title': title})
+                self.mp_container_description_db[id].insert_one({'Description':entr['Description'], 'ContNo':contno, 'Title': title})
+                self.mp_container_ctrl_db[id].insert_one({'Ctrl':entr['Ctrl'], 'ContNo':contno, 'Title': title})
 
                 if 'Element' in entr:
-                    self.container_element_db[id].insert_one({'Element':entr['Element'], 'ContNo':contno, 'Title': title})
+                    self.mp_container_element_db[id].insert_one({'Element':entr['Element'], 'ContNo':contno, 'Title': title})
                 else:
-                    self.container_element_db[id].insert_one({'Element':[], 'ContNo':contno, 'Title': title})
+                    self.mp_container_element_db[id].insert_one({'Element':[], 'ContNo':contno, 'Title': title})
 
                 definition = entr['Definition']
                 for serno, _ in enumerate(definition):
@@ -155,14 +198,14 @@ class ShortTermMemory(System):
             self.log.error(m)
             sys.exit(m)
 
-
+   
 
     def write_exchange(self, mpid, doc):
         if isinstance(doc, dict):
-            self.exchange_db[mpid].insert_one(doc)
+            self.mp_container_db[mpid].insert_one(doc)
 
     def read_exchange(self, id, find_set):
-        res = self.exchange_db[id].find(find_set)
+        res = self.mp_container_db[id].find(find_set)
         n = res.count()
         if n == 1:
             print(res[0])
