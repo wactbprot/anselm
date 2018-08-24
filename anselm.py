@@ -18,9 +18,10 @@ class Anselm(System):
         host = msg_dict['host']
         self.msg_param = pika.ConnectionParameters(host=host)
 
-        self.init_ltm_msg_prod()
+        self.init_ctrl_msg_prod()
         self.init_stm_msg_prod()
-
+        self.init_ltm_msg_prod()
+        
         parser = argparse.ArgumentParser(
             description='check systems',
             usage='''anselm <command> [<args>]''')
@@ -38,13 +39,11 @@ class Anselm(System):
 
         getattr(self, args.command)()
 
-    def start(self):
+    def ini_mps(self):
         """
-        """
-       
-        ## dont work, see tagline
-        self.stm_pub(body_dict={
-                    'do':'start',
+        """       
+        self.ltm_pub(body_dict={
+                    'do':'get_mps',
                     'payload':{}
                     })
         self.ltm_conn.close()
@@ -54,7 +53,7 @@ class Anselm(System):
         """
         
         self.stm_pub(body_dict={
-                    'do':'clear_all',
+                    'do':'clear_stm',
                     'payload':{}})
         self.stm_conn.close()
 
@@ -74,12 +73,12 @@ class Anselm(System):
         arg = parser.parse_args(sys.argv[2:3])
 
         if len(arg.calid) < self.max_arg_len:
-            self.stm_pub(body_dict={
+            self.ctrl_pub(body_dict={
                         'do':'build_mp_db',
                         'payload':{"id": arg.mpid}
                         })
 
-        self.stm_conn.close()
+        self.ctrl_conn.close()
 
     def build_cal_mp_for(self):
         """
@@ -95,12 +94,12 @@ class Anselm(System):
         arg = parser.parse_args(sys.argv[2:3])
 
         if len(arg.calid) < self.max_arg_len:
-            self.stm_pub(body_dict={
+            self.ctrl_pub(body_dict={
                         'do':'build_cal_db',
                         'payload':{"id": arg.calid}
                         })
 
-        self.stm_conn.close()
+        self.ctrl_conn.close()
 
     def read_exchange(self):
        

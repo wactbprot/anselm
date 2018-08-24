@@ -101,19 +101,27 @@ class ShortTermMemory(System):
             self.log.info("doc with same _id and _rev already exists")
 
         self.ctrl_pub(body_dict={
-            'source':'ltm'
-            'msg': 'insert_mp_doc_comlete',
-            'payload':doc['_id']
+            'source':'stm',
+            'msg': 'insert_mp_doc_complete',
+            'payload':{'id': doc['_id']}
         })
 
     def build_mp_db(self, id):
         doc = self.mp_doc_coll.find_one({'_id': id})
         if doc and 'Mp' in doc:
+            self.log.info("found document with id: {}, start building collections".format(id))
             mp = doc['Mp']
-            self.log.info("found document, start building collections")
-            standard = mp['Standard']
-            mp_name = mp['Name']
-            # start with filling up exchange
+
+            if 'Standard' in mp:
+                standard = mp['Standard']
+            else:
+                standard ="none"
+
+            if 'Name' in mp:
+                mp_name = mp['Name']
+            else:
+                mp_name = "none"
+
             self.write_exchange(id, {"StartTime":{"Type":"start", "Value":self.now()}})
 
             if 'Exchange' in mp:
@@ -122,9 +130,14 @@ class ShortTermMemory(System):
 
             for contno, entr in  enumerate(mp['Container']):
                 title = entr['Title']
+                
                 self.container_description_db[id].insert_one({'Description':entr['Description'], 'ContNo':contno, 'Title': title})
-                self.container_element_db[id].insert_one({'Element':entr['Element'], 'ContNo':contno, 'Title': title})
                 self.container_ctrl_db[id].insert_one({'Ctrl':entr['Ctrl'], 'ContNo':contno, 'Title': title})
+
+                if 'Element' in entr:
+                    self.container_element_db[id].insert_one({'Element':entr['Element'], 'ContNo':contno, 'Title': title})
+                else:
+                    self.container_element_db[id].insert_one({'Element':[], 'ContNo':contno, 'Title': title})
 
                 definition = entr['Definition']
                 for serno, _ in enumerate(definition):
@@ -137,9 +150,7 @@ class ShortTermMemory(System):
                         t['MpName'] = mp_name
                         t['Standard'] = standard
 
-                        self.ltm_pub(body_dict={'do':'provide_task', 'payload':t})
         else:
-
             m = "can not find document with id: {}".format(id)
             self.log.error(m)
             sys.exit(m)
