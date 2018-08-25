@@ -11,22 +11,36 @@ class LongTermMemory(System):
         self.init_ltm()
 
         self.log.info("long-term memory system start consuming")
-        self.init_stm_msg_prod()
-        self.init_ltm_msg_prod()
+        self.init_ctrl_msg_prod()
         self.init_ltm_msg_consume(callback=self.dispatch)
 
     def dispatch(self, ch, method, props, body):
+        res = json.loads(body)
+        do = res['do']
+        found = False
 
-        do, pl = self.parse_body(body)
-
-        if do == "start":
-            self.get_mp_defs()
-
+        if 'payload' in res:
+            pl = res['payload']
+            
+        if do == "get_mps":
+            self.get_mps()
+            found = True
+        
+        if do == "get_auxobj":
+            if 'id' in pl:
+                self.get_auxobj(pl['id'])
+            else:
+                self.log.error("payload contains no id")
+            found = True
+        
         if do == "store_doc":
             self.store_doc(pl)
+            found = True
 
-        self.log.info("dispatch to do: {}".format(do))
-
+        if found:
+            self.log.info("dispatch to do: {}".format(do))
+        else:
+            self.log.error("found no dispatch case for {}".format(do))
 
     def init_ltm(self):
         ltm_dict = self.config['couchdb']
@@ -37,28 +51,41 @@ class LongTermMemory(System):
         self.ltm_dict = ltm_dict
         self.ltm = couchdb.Server(url)
         self.ltm_db = self.ltm[self.ltm_dict['database']]
-        self.ltm_db_sav = self.ltm["{}_sav".format(self.ltm_dict['database'])]
         self.log.info("long-term memory system ok")
 
     def store_doc(self, doc):
         id = doc['_id']
-        dbdoc = self.ltm_db_sav[id]
+        dbdoc = self.ltm_db[id]
         if dbdoc:
             doc['_rev'] = dbdoc['_rev']
         else:
             doc.pop('_rev', None)
 
-        self.ltm_db_sav.save(doc)
+        self.ltm_db.save(doc)
 
-    def get_mp_defs(self):
+    def get_mps(self):
         view = self.ltm_dict['view']['mpd']
         for mp in self.ltm_db.view(view):
             if mp.id and mp.key == "mpdoc":
                 doc = self.ltm_db[mp.id]
-                self.stm_pub(body_dict={
-                            'do':'insert_document',
-                            'payload':doc}
+                self.ctrl_pub(body_dict={
+                            'contains':'mpdoc',
+                            'source':'ltm',
+                            'payload': doc}
                             )
             else:
                 self.log.info(
                     "document with id: {} will not be published".format(mp.id))
+
+    def get_auxobj(self, id):
+        doc = self.ltm_db[id]
+        if doc:
+            self.ctrl_pub(body_dict={
+                        'contains':'auxobj',
+                        'source':'ltm',
+                        'payload': doc}
+                        )
+        
+        else:
+            self.log.info(
+                "document with id: {} will not found".format(id))

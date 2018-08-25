@@ -18,9 +18,10 @@ class Anselm(System):
         host = msg_dict['host']
         self.msg_param = pika.ConnectionParameters(host=host)
 
-        self.init_ltm_msg_prod()
+        self.init_ctrl_msg_prod()
         self.init_stm_msg_prod()
-
+        self.init_ltm_msg_prod()
+        
         parser = argparse.ArgumentParser(
             description='check systems',
             usage='''anselm <command> [<args>]''')
@@ -38,50 +39,21 @@ class Anselm(System):
 
         getattr(self, args.command)()
 
-    def start(self):
-        """
-        """
-       
-        ## dont work, see tagline
-        self.stm_pub(body_dict={
-                    'do':'start',
+    def ini_mps(self):
+        self.ltm_pub(body_dict={
+                    'do':'get_mps',
                     'payload':{}
                     })
         self.ltm_conn.close()
 
     def clear_stm(self):
-        """
-        """
-        
         self.stm_pub(body_dict={
-                    'do':'clear_all',
+                    'do':'clear_stm',
                     'payload':{}})
         self.stm_conn.close()
 
     
-
-    def build_mp_db_for(self):
-        """
-        usage:
-
-        > python anselm build_mp_db_for mpid
-
-        """
-        parser = argparse.ArgumentParser(
-            description="builds the api for the mp given by id")
-
-        parser.add_argument('mpid')
-        arg = parser.parse_args(sys.argv[2:3])
-
-        if len(arg.calid) < self.max_arg_len:
-            self.stm_pub(body_dict={
-                        'do':'build_mp_db',
-                        'payload':{"id": arg.mpid}
-                        })
-
-        self.stm_conn.close()
-
-    def build_cal_mp_for(self):
+    def build_auxobj_mp_for(self):
         """
         usage:
 
@@ -91,16 +63,16 @@ class Anselm(System):
         parser = argparse.ArgumentParser(
             description="builds the api for the mp given by id")
 
-        parser.add_argument('calid')
+        parser.add_argument('id')
         arg = parser.parse_args(sys.argv[2:3])
 
-        if len(arg.calid) < self.max_arg_len:
-            self.stm_pub(body_dict={
-                        'do':'build_cal_db',
-                        'payload':{"id": arg.calid}
+        if len(arg.id) < self.max_arg_len:
+            self.ltm_pub(body_dict={
+                        'do':'get_auxobj',
+                        'payload':{"id": arg.id}
                         })
 
-        self.stm_conn.close()
+        self.ctrl_conn.close()
 
     def read_exchange(self):
        

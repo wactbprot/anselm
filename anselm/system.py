@@ -32,7 +32,6 @@ class System:
 
         self.log.info("logging system online")
 
-    
     def queue_factory(self, queue_name):
         conn = pika.BlockingConnection(self.msg_param)
         chan = conn.channel()
@@ -52,8 +51,8 @@ class System:
 
     def init_ctrl_msg_prod(self):
         conn, chan = self.queue_factory(queue_name='ctrl')
-        self.ltm_conn = conn
-        self.ltm_chan = chan
+        self.ctrl_conn = conn
+        self.ctrl_chan = chan
 
     def init_ltm_msg_consume(self, callback):
         queue_name = 'ltm'
@@ -86,7 +85,7 @@ class System:
                                     body=json.dumps(body_dict))
 
     def ctrl_pub(self, body_dict):
-        self.stm_chan.basic_publish(exchange='',
+        self.ctrl_chan.basic_publish(exchange='',
                                     routing_key='ctrl',
                                     body=json.dumps(body_dict))
 
