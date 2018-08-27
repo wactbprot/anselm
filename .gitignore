@@ -4,6 +4,7 @@ docs/
 /*.egg-info
 .coverage
 lib/
+bin/
 lib64
 pyvenv.cfg
 share/
