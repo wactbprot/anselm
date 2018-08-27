@@ -3,9 +3,6 @@
         "host": "localhost",
         "port": 27017
     },
-    "rabbitmq": {
-        "host": "localhost"
-    },
     "couchdb": {
         "host": "localhost",
         "port": 5984,

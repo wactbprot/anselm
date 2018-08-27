@@ -1,7 +1,6 @@
 import sys
 import json
 import argparse
-import pika
 from anselm.system import System
 
 class Anselm(System):
@@ -13,15 +12,7 @@ class Anselm(System):
     """
     def __init__(self):
         super().__init__()
-
-        msg_dict = self.config['rabbitmq']
-        host = msg_dict['host']
-        self.msg_param = pika.ConnectionParameters(host=host)
-
-        self.init_ctrl_msg_prod()
-        self.init_stm_msg_prod()
-        self.init_ltm_msg_prod()
-        
+       
         parser = argparse.ArgumentParser(
             description='check systems',
             usage='''anselm <command> [<args>]''')
