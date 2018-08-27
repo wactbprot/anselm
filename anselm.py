@@ -72,7 +72,26 @@ class Anselm(System):
                         'payload':{"id": arg.id}
                         })
 
-        self.ctrl_conn.close()
+        self.ltm_conn.close()
+    
+    def run_task(self):
+        parser = argparse.ArgumentParser(
+            description="builds the api for the mp given by id")
+
+        print(sys.argv)
+
+        parser.add_argument('id')
+        parser.add_argument('task')
+
+        arg = parser.parse_args(sys.argv[2:4])        
+
+        if len(arg.id) < self.max_arg_len and len(arg.task) < self.max_arg_len:
+            self.stm_pub(body_dict={
+                        'do':'trigger_run_task',
+                        'payload':{"id": arg.id, "task":arg.task}
+                        })
+
+        self.stm_conn.close()
 
     def read_exchange(self):
        

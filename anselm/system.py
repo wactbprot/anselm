@@ -3,6 +3,8 @@ import pika
 import coloredlogs
 import logging
 import datetime
+import time
+
 
 
 class System:
@@ -22,7 +24,8 @@ class System:
 
         self.init_log()
         self.msg_param = pika.ConnectionParameters(
-            host=self.config['rabbitmq']['host'])
+            host=self.config['rabbitmq']['host'],
+            heartbeat_interval=10)
         self.log.info("system __init__ complete")
 
     def init_log(self):
@@ -38,7 +41,14 @@ class System:
         chan.queue_declare(queue=queue_name)
 
         return conn, chan
-
+   
+    def init_msg_consume(self, queue_name, callback):
+        _, chan = self.queue_factory(queue_name=queue_name)
+        chan.basic_consume(callback,
+                           queue=queue_name,
+                           no_ack=True)
+        chan.start_consuming()
+   
     def init_stm_msg_prod(self):
         conn, chan = self.queue_factory(queue_name='stm')
         self.stm_conn = conn
@@ -53,31 +63,6 @@ class System:
         conn, chan = self.queue_factory(queue_name='ctrl')
         self.ctrl_conn = conn
         self.ctrl_chan = chan
-
-    def init_ltm_msg_consume(self, callback):
-        queue_name = 'ltm'
-        _, chan = self.queue_factory(queue_name=queue_name)
-        chan.basic_consume(callback,
-                           queue=queue_name,
-                           no_ack=True)
-        chan.start_consuming()
-
-    def init_ctrl_msg_consume(self, callback):
-        queue_name = 'ctrl'
-        _, chan = self.queue_factory(queue_name=queue_name)
-        chan.basic_consume(callback,
-                           queue=queue_name,
-                           no_ack=True)
-        chan.start_consuming()
-
-
-    def init_stm_msg_consume(self, callback):
-        queue_name = 'stm'
-        _, chan = self.queue_factory(queue_name=queue_name)
-        chan.basic_consume(callback,
-                           queue=queue_name,
-                           no_ack=True)
-        chan.start_consuming()
 
     def stm_pub(self, body_dict):
         self.stm_chan.basic_publish(exchange='',
