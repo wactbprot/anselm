@@ -42,7 +42,7 @@ class Anselm(System):
     def clear_stm(self):
         self.stm.clear_stm()
     
-    def build_auxobj_mp_for(self):
+    def build_auxobj_db_for(self):
         """
         usage:
 
