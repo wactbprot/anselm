@@ -1,8 +1,11 @@
 import sys
 import json
 import argparse
-import pika
-from anselm.system import System
+from threading import Thread
+from anselm.system import System # pylint: disable=E0611
+from anselm.long_term_memory import LongTermMemory # pylint: disable=E0611
+from anselm.short_term_memory import ShortTermMemory # pylint: disable=E0611
+from anselm.worker import Worker # pylint: disable=E0611
 
 class Anselm(System):
     """
@@ -13,15 +16,11 @@ class Anselm(System):
     """
     def __init__(self):
         super().__init__()
-
-        msg_dict = self.config['rabbitmq']
-        host = msg_dict['host']
-        self.msg_param = pika.ConnectionParameters(host=host)
-
-        self.init_ctrl_msg_prod()
-        self.init_stm_msg_prod()
-        self.init_ltm_msg_prod()
         
+        self.ltm = LongTermMemory()
+        self.stm = ShortTermMemory()
+        self.worker = Worker()
+
         parser = argparse.ArgumentParser(
             description='check systems',
             usage='''anselm <command> [<args>]''')
@@ -39,49 +38,58 @@ class Anselm(System):
 
         getattr(self, args.command)()
 
-    def ini_mps(self):
-        self.ltm_pub(body_dict={
-                    'do':'get_mps',
-                    'payload':{}
-                    })
-        self.ltm_conn.close()
-
-    def clear_stm(self):
-        self.stm_pub(body_dict={
-                    'do':'clear_stm',
-                    'payload':{}})
-        self.stm_conn.close()
-
     
-    def build_auxobj_mp_for(self):
+    def clear_stm(self):
+        self.stm.clear_stm()
+    
+    def build_auxobj_db_for(self):
         """
         usage:
 
         > python anselm provide_excahnge_for calid
         
         """
-        parser = argparse.ArgumentParser(
-            description="builds the api for the mp given by id")
+        parser = argparse.ArgumentParser(description="builds the api for the mp given by id")
 
         parser.add_argument('id')
         arg = parser.parse_args(sys.argv[2:3])
 
         if len(arg.id) < self.max_arg_len:
-            self.ltm_pub(body_dict={
-                        'do':'get_auxobj',
-                        'payload':{"id": arg.id}
-                        })
+            doc = self.ltm.get_auxobj(arg.id)
+            if doc:
+                self.stm.build_auxobj_db(doc)
 
-        self.ctrl_conn.close()
+    def list_tasks_for(self):
+        parser = argparse.ArgumentParser(description="list the tasks for given by id")
 
-    def read_exchange(self):
-       
-        self.stm_pub(body_dict={
-                        'do':'read_exchange',
-                        'payload':{"id":"mpd-ce3-calib", "find_set":{"StartTime.Type":"start"}}
-                        })
+        parser.add_argument('id')
 
-        self.stm_conn.close()
+        arg = parser.parse_args(sys.argv[2:3])        
+        id = arg.id
+        if len(id) < self.max_arg_len:
+             self.stm.get_tasknames(id)
 
+    def run_task(self):
+        parser = argparse.ArgumentParser(description="builds the api for the mp given by id")
+
+        parser.add_argument('id')
+        parser.add_argument('taskname')
+
+        arg = parser.parse_args(sys.argv[2:4])        
+        id = arg.id
+        taskname = arg.taskname
+
+        if len(id) < self.max_arg_len and len(taskname) < self.max_arg_len:
+            task = self.stm.get_task(id, taskname)
+            if task:
+                Thread(target=self.worker.run, args=(task, )).start()
+                self.log.info("start thread for task: {}".format(task['TaskName']))
+            else:
+                self.log.error("task not found")
+        
+
+
+
+   
 if __name__ == '__main__':
     Anselm()

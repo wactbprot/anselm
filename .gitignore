@@ -1,9 +1,12 @@
 *.pyc
-/dist/
-docs/
+dist
+docs
 /*.egg-info
 .coverage
-lib/
+lib
+bin
 lib64
 pyvenv.cfg
 share/
+pip-selfcheck.json
+.vscode
