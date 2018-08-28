@@ -11,37 +11,7 @@ class LongTermMemory(System):
         self.init_ltm()
 
         self.log.info("long-term memory system start consuming")
-        self.init_ctrl_msg_prod()
-        self.init_msg_consume(queue_name='ltm', callback=self.dispatch)
-
-    def dispatch(self, ch, method, props, body):
-        res = json.loads(body)
-        do = res['do']
-        found = False
-
-        if 'payload' in res:
-            pl = res['payload']
-            
-        if do == "get_mps":
-            self.get_mps()
-            found = True
-        
-        if do == "get_auxobj":
-            if 'id' in pl:
-                self.get_auxobj(pl['id'])
-            else:
-                self.log.error("payload contains no id")
-            found = True
-        
-        if do == "store_doc":
-            self.store_doc(pl)
-            found = True
-
-        if found:
-            self.log.info("dispatch to do: {}".format(do))
-        else:
-            self.log.error("found no dispatch case for {}".format(do))
-
+      
     def init_ltm(self):
         ltm_dict = self.config['couchdb']
         port = ltm_dict['port']
@@ -67,25 +37,14 @@ class LongTermMemory(System):
         view = self.ltm_dict['view']['mpd']
         for mp in self.ltm_db.view(view):
             if mp.id and mp.key == "mpdoc":
-                doc = self.ltm_db[mp.id]
-                self.ctrl_pub(body_dict={
-                            'contains':'mpdoc',
-                            'source':'ltm',
-                            'payload': doc}
-                            )
-            else:
-                self.log.info(
-                    "document with id: {} will not be published".format(mp.id))
-
+                self.ltm_db[mp.id]
+               
+          
     def get_auxobj(self, id):
         doc = self.ltm_db[id]
         if doc:
-            self.ctrl_pub(body_dict={
-                        'contains':'auxobj',
-                        'source':'ltm',
-                        'payload': doc}
-                        )
-        
+            return doc
         else:
-            self.log.info(
-                "document with id: {} will not found".format(id))
+            self.log.error("document with id: {} does not exist".format(id))
+            return None
+        

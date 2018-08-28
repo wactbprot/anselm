@@ -9,7 +9,11 @@
         "database": "vl_db",
         "view": {
             "mpd": "dbmp/mpdocs"
-        }
+        }    
     },
+    "relay":{
+        "host": "i75419.berlin.ptb.de",
+        "port": 55555
+        },
     "loglevel": "INFO"
 }
