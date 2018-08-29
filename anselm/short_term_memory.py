@@ -13,32 +13,6 @@ class ShortTermMemory(System):
         stm_dict = self.config['mongodb']
         self.stm_dict = stm_dict
         self.stm = MongoClient(stm_dict['host'], stm_dict['port'])
-<<<<<<< HEAD
-        self.init_stm()
-
-        self.init_ctrl_msg_prod()
-        self.init_stm_msg_consume(callback=self.dispatch)
-
-    def dispatch(self, ch, method, props, body):
-        found = False
-        do, pl = self.parse_body(body)
-
-        if do == "insert_mp_doc":
-            self.insert_mp_doc(pl)
-            found=True
-
-        if do == "insert_auxobj_doc":
-            self.insert_auxobj_doc(pl)
-            found=True
-
-        if do == "build_mp_db":
-            self.build_mp_db(pl['id'])
-            found=True
-        
-        if do == "build_auxobj_db":
-            self.build_auxobj_db(pl['id'])
-            found=True
-=======
    
      
     def get_task(self, id, taskname):
@@ -51,7 +25,6 @@ class ShortTermMemory(System):
         tasks = self.stm[id]['tasks'].find()
         for task in tasks:
             print(task['TaskName'])    
->>>>>>> f5fcc6a8f968b8888c91ca7a63a5a2d9d7a3c94b
         
         
         
