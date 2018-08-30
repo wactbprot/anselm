@@ -1,7 +1,6 @@
 import requests
 import json
 from anselm.system import System
-from anselm.short_term_memory import ShortTermMemory
 
 
 class Worker(System):
@@ -14,7 +13,6 @@ class Worker(System):
         self.relay_url = "http://{}:{}".format(relay_dict['host'], relay_dict['port'])
         self.headers = {'content-type': 'application/json'}
         
-        self.stm = ShortTermMemory()
 
     def run(self, task):
         acc = task['Action']
