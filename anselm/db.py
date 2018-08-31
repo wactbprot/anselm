@@ -18,34 +18,71 @@ class DB(System):
         url = 'http://{}:{}/'.format(host, port)
 
         self.db_dict = db_dict
-        self.db = couchdb.Server(url)
-        self.db_db = self.db[self.db_dict['database']]
+        self.db_srv = couchdb.Server(url)
+        self.db = self.db_srv[self.db_dict['database']]
         self.log.info("long-term memory system ok")
 
     def store_doc(self, doc):
         id = doc['_id']
-        dbdoc = self.db_db[id]
+        dbdoc = self.db[id]
         if dbdoc:
             doc['_rev'] = dbdoc['_rev']
         else:
             doc.pop('_rev', None)
 
-        self.db_db.save(doc)
+        self.db.save(doc)
 
-    def get_mps(self):
-        view = self.db_dict['view']['mpd']
-        for mp in self.db_db.view(view):
-            if mp.id and mp.key == "mpdoc":
-                self.db_db[mp.id]
-    
+       
     def get_auxobj_ids(self):         
         view = self.db_dict['view']['auxobj']
         
-        return [doc['id'] for doc in self.db_db.view(view)]
+        return [doc['id'] for doc in self.db.view(view)]
+    
+    def get_red_doc(self, doc_id):
+        doc = self.db[doc_id]
+        red_doc = None
+        if doc:
+            if 'AuxObject' in doc:
+                red_doc = doc['AuxObject']
             
+            if 'CalibrationObject' in doc:
+                red_doc = doc['CalibrationObject']
+        else:
+            self.log.error("no doc with id {}".format(doc_id))
+
+        if red_doc:   
+            return red_doc
+        else:
+            return None
+
+    def get_task_names(self, doc_id):         
+        doc = self.get_red_doc(doc_id)
+        if doc and 'Task' in doc:
+            return [task['TaskName'] for task in doc['Task']]
+        else:
+            return []
+        
+    def get_task(self, doc_id, task_name):         
+        doc = self.get_red_doc(doc_id)
+        if doc and 'Task' in doc:
+            tasks = doc['Task']
+            for task in tasks:
+                if task['TaskName'] == task_name:
+                    break
+
+            if 'Defaults' in doc:
+                defaults = doc['Defaults']       
+                task = self.replace_defaults(task=task, defaults=defaults)
+
+            return task
+        else:
+            self.log.error("no doc with id {}".format(doc_id))
+            return []
+       
+     
 
     def get_auxobj(self, id):
-        doc = self.db_db[id]
+        doc = self.db[id]
         if doc:
             return doc
         else:
