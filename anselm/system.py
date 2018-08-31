@@ -11,7 +11,7 @@ class System:
     """
     max_arg_len = 40
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
-
+    state = {}
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.

@@ -43,10 +43,11 @@ class Anselm(System):
         
         run_bttn = self.make_run_bttn(line = line)
         auxobj_combo = self.make_auxobj_combo(line = line)
+        run_kind_combo = self.make_run_kind_combo(line = line)
 
         self.add_widget_to_grid(run_bttn, line, 1)
-        self.add_widget_to_grid(auxobj_combo, line, 2)
-             
+        self.add_widget_to_grid(run_kind_combo, line, 2)
+        self.add_widget_to_grid(auxobj_combo, line, 3)
         self.draw_grid()
 
     def draw_grid(self):
@@ -58,7 +59,15 @@ class Anselm(System):
         run_device_bttn.clicked.connect(lambda: self.run_device(line))
 
         return run_device_bttn
+    
+    def make_run_kind_combo(self, line):
+       
+        run_kinds = ["single", "loop"]
+        combo = self.make_combo(run_kinds, first_item = None) 
+        combo.currentIndexChanged.connect(lambda: self.run_kind_selected(combo, line))
 
+        return combo
+    
     def make_auxobj_combo(self, line):
        
         aux_obj_ids = self.db.get_auxobj_ids()
@@ -81,7 +90,12 @@ class Anselm(System):
 
         return combo
 
-    
+    def run_kind_selected(self, combo, line):
+
+        run_kind = combo.currentText()
+        line_key = self.get_line_key(line)
+        self.state[line_key]['run_kind'] = run_kind
+
     def task_selected(self, combo, line):
 
         line_key = self.get_line_key(line)
@@ -106,7 +120,7 @@ class Anselm(System):
         self.log.debug("select {} at line {}".format(doc_id, line))
 
         auxobj_combo = self.make_task_combo(doc_id = doc_id, line = line)
-        self.add_widget_to_grid(widget=auxobj_combo, line=line, col=3)
+        self.add_widget_to_grid(widget=auxobj_combo, line=line, col=4)
         self.draw_grid()
 
     def add_widget_to_grid(self, widget, line, col):
@@ -116,9 +130,11 @@ class Anselm(System):
         
         self.grid.addWidget(widget, line, col)
 
-    def make_combo(self, item_list):
+    def make_combo(self, item_list, first_item='select'):
         combo = QComboBox(self.win)
-        combo.addItem("select")
+
+        if first_item:
+            combo.addItem(first_item)
 
         for item in item_list:
             combo.addItem(item)
@@ -138,6 +154,7 @@ class Anselm(System):
                 self.log.error("no task selected at line {}".format(line))
         if task:
             Thread(target=self.worker.run, args=(task, )).start()
+            
 
 if __name__ == '__main__':
 

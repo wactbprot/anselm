@@ -26,7 +26,9 @@ class Worker(System):
         
         if 'Result' in res:
             print(res['Result'])
-        
+            print(self.state)
+            print("dddddddddddddddddd")
+
         if 'ToExchange' in res:
             print(res['ToExchange'])
         
