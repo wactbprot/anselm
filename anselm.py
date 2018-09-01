@@ -100,7 +100,7 @@ class Anselm(System):
 
         line_key = self.get_line_key(line)
 
-        doc_id = self.state[line_key]['doc_id']
+        doc_id = self.state.get(line_key).get('doc_id')
         task_name = combo.currentText()
         self.state[line_key]['task_name'] = task_name
 
