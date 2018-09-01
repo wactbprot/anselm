@@ -3,93 +3,162 @@ import json
 import argparse
 from threading import Thread
 from anselm.system import System # pylint: disable=E0611
-from anselm.long_term_memory import LongTermMemory # pylint: disable=E0611
-from anselm.short_term_memory import ShortTermMemory # pylint: disable=E0611
+from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
+from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout
+
+import sys
+
 
 class Anselm(System):
-    """
-    https://chase-seibert.github.io/blog/2014/03/21/python-multilevel-argparse.html
+    state = {}
 
-
-    always talk to short-term-memory, if there is somthing not in stm try to remember
-    """
     def __init__(self):
         super().__init__()
-        
-        self.ltm = LongTermMemory()
-        self.stm = ShortTermMemory()
+              
+        self.db = DB()
         self.worker = Worker()
+        self.current_grid_line = 1
+        self.initUI()
+       
+    def initUI(self):
+        self.win = QWidget()
+        self.win.resize(250, 150)
+        self.win.setWindowTitle('Anselm')
+        self.grid = QGridLayout()
 
-        parser = argparse.ArgumentParser(
-            description='check systems',
-            usage='''anselm <command> [<args>]''')
+        add_device_bttn = QPushButton("add device", self.win)
+        add_device_bttn.clicked.connect(self.add_device_line)
+      
+        self.add_widget_to_grid(add_device_bttn ,1, 2)
 
-        parser.add_argument('command', help='Subcommand to run')
-        args = parser.parse_args(sys.argv[1:2])
-
-        if not hasattr(self, args.command):
-            parser.print_help()
-            exit(1)
-
-        if len(args.command) > self.max_arg_len:
-            print("command too long")
-            exit(1)
-
-        getattr(self, args.command)()
-
-    
-    def clear_stm(self):
-        self.stm.clear_stm()
-    
-    def build_auxobj_db_for(self):
-        """
-        usage:
-
-        > python anselm provide_excahnge_for calid
+        self.draw_grid()        
         
-        """
-        parser = argparse.ArgumentParser(description="builds the api for the mp given by id")
+    def add_device_line(self):
+        self.current_grid_line +=1
+        line = self.current_grid_line
+        line_key = self.get_line_key(line)
 
-        parser.add_argument('id')
-        arg = parser.parse_args(sys.argv[2:3])
+        self.state[line_key] = {}
+        
+        run_bttn = self.make_run_bttn(line = line)
+        auxobj_combo = self.make_auxobj_combo(line = line)
+        run_kind_combo = self.make_run_kind_combo(line = line)
 
-        if len(arg.id) < self.max_arg_len:
-            doc = self.ltm.get_auxobj(arg.id)
-            if doc:
-                self.stm.build_auxobj_db(doc)
+        self.add_widget_to_grid(run_bttn, line, 1)
+        self.add_widget_to_grid(run_kind_combo, line, 2)
+        self.add_widget_to_grid(auxobj_combo, line, 3)
+        self.draw_grid()
 
-    def list_tasks_for(self):
-        parser = argparse.ArgumentParser(description="list the tasks for given by id")
+    def draw_grid(self):
+        self.win.setLayout(self.grid)
+        self.win.show()
 
-        parser.add_argument('id')
+    def make_run_bttn(self, line):
+        run_device_bttn = QPushButton("run", self.win)  
+        run_device_bttn.clicked.connect(lambda: self.run_device(line))
 
-        arg = parser.parse_args(sys.argv[2:3])        
-        id = arg.id
-        if len(id) < self.max_arg_len:
-             self.stm.get_tasknames(id)
+        return run_device_bttn
+    
+    def make_run_kind_combo(self, line):
+       
+        run_kinds = ["single", "loop"]
+        combo = self.make_combo(run_kinds, first_item = None) 
+        combo.currentIndexChanged.connect(lambda: self.run_kind_selected(combo, line))
 
-    def run_task(self):
-        parser = argparse.ArgumentParser(description="builds the api for the mp given by id")
+        return combo
+    
+    def make_auxobj_combo(self, line):
+       
+        aux_obj_ids = self.db.get_auxobj_ids()
+       
+        self.log.debug("found following auxobj ids {}".format(aux_obj_ids))
+       
+        combo = self.make_combo(aux_obj_ids) 
+        combo.currentIndexChanged.connect(lambda: self.auxobj_selected(combo, line))
 
-        parser.add_argument('id')
-        parser.add_argument('taskname')
+        return combo
+    
+    def make_task_combo(self, doc_id, line):
+       
+        task_names = self.db.get_task_names(doc_id = doc_id)
+       
+        self.log.debug("found following tasknames {}".format(task_names))
+       
+        combo = self.make_combo(task_names) 
+        combo.currentIndexChanged.connect(lambda: self.task_selected(combo, line))
 
-        arg = parser.parse_args(sys.argv[2:4])        
-        id = arg.id
-        taskname = arg.taskname
+        return combo
 
-        if len(id) < self.max_arg_len and len(taskname) < self.max_arg_len:
-            task = self.stm.get_task(id, taskname)
-            if task:
-                Thread(target=self.worker.run, args=(task, )).start()
-                self.log.info("start thread for task: {}".format(task['TaskName']))
+    def run_kind_selected(self, combo, line):
+
+        run_kind = combo.currentText()
+        line_key = self.get_line_key(line)
+        self.state[line_key]['run_kind'] = run_kind
+
+    def task_selected(self, combo, line):
+
+        line_key = self.get_line_key(line)
+
+        doc_id = self.state[line_key]['doc_id']
+        task_name = combo.currentText()
+        self.state[line_key]['task_name'] = task_name
+
+        self.log.info("task with name {} selected at line {}".format(task_name, line))
+        self.log.debug("state dict: {}".format(self.state))
+        
+        task = self.db.get_task(doc_id, task_name)
+        self.state[line_key]['task'] = task 
+        self.log.debug("task: {}".format(task))
+
+    def auxobj_selected(self, combo, line):
+        doc_id = combo.currentText()
+        line_key = self.get_line_key(line)
+
+        self.state[line_key]['doc_id'] = doc_id 
+
+        self.log.debug("select {} at line {}".format(doc_id, line))
+
+        auxobj_combo = self.make_task_combo(doc_id = doc_id, line = line)
+        self.add_widget_to_grid(widget=auxobj_combo, line=line, col=4)
+        self.draw_grid()
+
+    def add_widget_to_grid(self, widget, line, col):
+
+        #old_widget_item = self.grid.itemAtPosition (line, col)
+        #old_widget = old_widget_item.widget()
+        
+        self.grid.addWidget(widget, line, col)
+
+    def make_combo(self, item_list, first_item='select'):
+        combo = QComboBox(self.win)
+
+        if first_item:
+            combo.addItem(first_item)
+
+        for item in item_list:
+            combo.addItem(item)
+        return combo
+    def get_line_key(self, line):
+        return 'line_{}'.format(line)
+
+    def run_device(self, line):
+        line_key = self.get_line_key(line)
+        task = None
+
+        self.log.info("start device at line {}".format(line))
+        if line_key in self.state:
+            if 'task' in self.state[line_key]:
+                task = self.state[line_key]['task']  
             else:
-                self.log.error("task not found")
-        
+                self.log.error("no task selected at line {}".format(line))
+        if task:
+            Thread(target=self.worker.run, args=(task, )).start()
+            
 
-
-
-   
 if __name__ == '__main__':
-    Anselm()
+
+    app = QApplication(sys.argv)
+    ex = Anselm()
+    sys.exit(app.exec_())
+

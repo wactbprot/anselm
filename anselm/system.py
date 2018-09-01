@@ -11,7 +11,7 @@ class System:
     """
     max_arg_len = 40
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
-
+    state = {}
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.
@@ -20,9 +20,8 @@ class System:
         # open and parse config file
         with open('anselm/config.json') as json_config_file:
             self.config = json.load(json_config_file)
-
-        self.init_log()
-      
+        self.init_log() 
+    
     def init_log(self):
         self.log = logging.getLogger()
         coloredlogs.install(
