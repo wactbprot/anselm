@@ -36,6 +36,7 @@ class Anselm(System):
         
     def add_device_line(self):
         self.current_grid_line +=1
+        
         line = self.current_grid_line
         line_key = self.get_line_key(line)
 
@@ -112,6 +113,7 @@ class Anselm(System):
         self.log.debug("task: {}".format(task))
 
     def auxobj_selected(self, combo, line):
+
         doc_id = combo.currentText()
         line_key = self.get_line_key(line)
 
@@ -131,6 +133,7 @@ class Anselm(System):
         self.grid.addWidget(widget, line, col)
 
     def make_combo(self, item_list, first_item='select'):
+
         combo = QComboBox(self.win)
 
         if first_item:
@@ -139,17 +142,20 @@ class Anselm(System):
         for item in item_list:
             combo.addItem(item)
         return combo
+
     def get_line_key(self, line):
+
         return 'line_{}'.format(line)
 
     def run_device(self, line):
+
         line_key = self.get_line_key(line)
         task = None
 
         self.log.info("start device at line {}".format(line))
         if line_key in self.state:
             if 'task' in self.state[line_key]:
-                task = self.state[line_key]['task']  
+                task = self.state.get(line_key).get('task')  
             else:
                 self.log.error("no task selected at line {}".format(line))
         if task:
@@ -161,4 +167,3 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = Anselm()
     sys.exit(app.exec_())
-

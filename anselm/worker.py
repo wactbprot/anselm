@@ -8,27 +8,28 @@ class Worker(System):
 
     def __init__(self):
         super().__init__()
-        relay_dict = self.config['relay']
+        relay_dict = self.config.get('relay')
         self.relay_dict = relay_dict
-        self.relay_url = "http://{}:{}".format(relay_dict['host'], relay_dict['port'])
+        self.relay_url = "http://{}:{}".format(relay_dict.get('host'), relay_dict.get('port')
         self.headers = {'content-type': 'application/json'}
         
-
     def run(self, task):
-        acc = task['Action']
+        acc = task.get('Action')
 
-        if acc == "TCP":
-            self.relay_worker(task)
-    
+        if acc:
+            if acc == "TCP":
+                self.relay_worker(task)
+        else:
+            self.log.error("task contains no action")
+
     def relay_worker(self, task):
         req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
         res = req.json()
         
         if 'Result' in res:
-            print(res['Result'])
+            print(res.get('Result'))
             print(self.state)
-            print("dddddddddddddddddd")
 
         if 'ToExchange' in res:
-            print(res['ToExchange'])
+            print(res.get('ToExchange'))
         
