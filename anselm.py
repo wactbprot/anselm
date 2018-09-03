@@ -5,13 +5,13 @@ from threading import Thread
 from anselm.system import System # pylint: disable=E0611
 from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
-from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout
+from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QLineEdit
 
 import sys
 
 
 class Anselm(System):
-    state = {}
+   
 
     def __init__(self):
         super().__init__()
@@ -30,8 +30,12 @@ class Anselm(System):
         add_device_bttn = QPushButton("add device", self.win)
         add_device_bttn.clicked.connect(self.add_device_line)
       
-        self.add_widget_to_grid(add_device_bttn ,1, 2)
+        std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
+        std_select_combo = self.make_combo(std_select, first_item = None) 
 
+        self.add_widget_to_grid(std_select_combo ,1, 1)
+        self.add_widget_to_grid(add_device_bttn ,1, 2)
+        std_select_combo.currentIndexChanged.connect(lambda: self.std_selected(std_select_combo))
         self.draw_grid()        
         
     def add_device_line(self):
@@ -59,7 +63,13 @@ class Anselm(System):
         run_device_bttn.clicked.connect(lambda: self.run_device(line))
 
         return run_device_bttn
-    
+
+    def make_result_textbox(self, line):
+        result_textbox = QLineEdit(self.win)
+        result_textbox.resize(280,40)
+
+        return result_textbox
+
     def make_run_kind_combo(self, line):
        
         run_kinds = ["single", "loop"]
@@ -67,7 +77,15 @@ class Anselm(System):
         combo.currentIndexChanged.connect(lambda: self.run_kind_selected(combo, line))
 
         return combo
-    
+   
+    def make_calib_id_combo(self, line):
+       
+        run_kinds = ["single", "loop"]
+        combo = self.make_combo(run_kinds, first_item = None) 
+        combo.currentIndexChanged.connect(lambda: self.run_kind_selected(combo, line))
+
+        return combo
+   
     def make_auxobj_combo(self, line):
        
         aux_obj_ids = self.db.get_auxobj_ids()
@@ -111,6 +129,8 @@ class Anselm(System):
         self.state[line_key]['task'] = task 
         self.log.debug("task: {}".format(task))
 
+        self.make_result_textbox(line)
+
     def auxobj_selected(self, combo, line):
         doc_id = combo.currentText()
         line_key = self.get_line_key(line)
@@ -139,6 +159,7 @@ class Anselm(System):
         for item in item_list:
             combo.addItem(item)
         return combo
+
     def get_line_key(self, line):
         return 'line_{}'.format(line)
 
@@ -153,8 +174,12 @@ class Anselm(System):
             else:
                 self.log.error("no task selected at line {}".format(line))
         if task:
+            self.log.debug("task is: {}".format(task))
             Thread(target=self.worker.run, args=(task, )).start()
-            
+       
+    def std_selected(self, combo):
+        self.state['standard'] = combo.currentText()
+        self.log.info("select standard {}".format( self.state.get('standard')))
 
 if __name__ == '__main__':
 

@@ -19,15 +19,15 @@ class Worker(System):
 
         if acc == "TCP":
             self.relay_worker(task)
+        if acc == "VXI11":
+            self.relay_worker(task)
     
     def relay_worker(self, task):
         req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
         res = req.json()
-        
         if 'Result' in res:
             print(res['Result'])
-            print(self.state)
-            print("dddddddddddddddddd")
+          
 
         if 'ToExchange' in res:
             print(res['ToExchange'])
