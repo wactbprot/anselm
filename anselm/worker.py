@@ -14,19 +14,21 @@ class Worker(System):
         self.headers = {'content-type': 'application/json'}
         
 
-    def run(self, task):
+    def run(self, task, line, callback=None):
         acc = task['Action']
 
         if acc == "TCP":
-            self.relay_worker(task)
+            self.relay_worker(task, line, callback)
         if acc == "VXI11":
-            self.relay_worker(task)
+            self.relay_worker(task, line, callback)
     
-    def relay_worker(self, task):
+    def relay_worker(self, task, line, callback):
         req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
         res = req.json()
         if 'Result' in res:
-            print(res['Result'])
+            if callable(callback):
+                callback(line, res['Result'])
+                print(res['Result'])
           
 
         if 'ToExchange' in res:

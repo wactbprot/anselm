@@ -5,7 +5,7 @@ from threading import Thread
 from anselm.system import System # pylint: disable=E0611
 from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
-from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QLineEdit
+from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QLabel
 
 import sys
 
@@ -64,10 +64,11 @@ class Anselm(System):
 
         return run_device_bttn
 
-    def make_result_textbox(self, line):
-        result_textbox = QLineEdit(self.win)
-        result_textbox.resize(280,40)
-
+    def make_result_label(self, line, text):
+        result_textbox = QLabel(self.win)
+        #result_textbox.resize(280,40)
+        result_textbox.setText("-----------")
+        
         return result_textbox
 
     def make_run_kind_combo(self, line):
@@ -129,8 +130,8 @@ class Anselm(System):
         self.state[line_key]['task'] = task 
         self.log.debug("task: {}".format(task))
 
-        self.make_result_textbox(line)
-
+       
+    
     def auxobj_selected(self, combo, line):
         doc_id = combo.currentText()
         line_key = self.get_line_key(line)
@@ -175,8 +176,15 @@ class Anselm(System):
                 self.log.error("no task selected at line {}".format(line))
         if task:
             self.log.debug("task is: {}".format(task))
-            Thread(target=self.worker.run, args=(task, )).start()
-       
+            Thread(target=self.worker.run, args=(task, line, self.result_callback)).start()
+
+    def result_callback(self, line, results):
+        self.log.info('result: {} at line {}'.format(results, line))
+        text = ""
+        for _, result in enumerate(results):
+            text = "{} {} {}".format(text,result.get('Value'), result.get('Unit'))
+        print(text)
+
     def std_selected(self, combo):
         self.state['standard'] = combo.currentText()
         self.log.info("select standard {}".format( self.state.get('standard')))
