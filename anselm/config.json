@@ -6,7 +6,11 @@
         "view": {
             "auxobj": "share/AuxObject"
         }    
-    },
+    },"redis":{
+        "host": "localhost",
+        "port": 6379,
+        "db":0
+        },
     "relay":{
         "host": "localhost",
         "port": 55555

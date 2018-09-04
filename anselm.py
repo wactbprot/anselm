@@ -176,15 +176,8 @@ class Anselm(System):
                 self.log.error("no task selected at line {}".format(line))
         if task:
             self.log.debug("task is: {}".format(task))
-            Thread(target=self.worker.run, args=(task, line, self.result_callback)).start()
-
-    def result_callback(self, line, results):
-        self.log.info('result: {} at line {}'.format(results, line))
-        text = ""
-        for _, result in enumerate(results):
-            text = "{} {} {}".format(text,result.get('Value'), result.get('Unit'))
-        print(text)
-
+            Thread(target=self.worker.run, args=(task, line,)).start()
+        
     def std_selected(self, combo):
         self.state['standard'] = combo.currentText()
         self.log.info("select standard {}".format( self.state.get('standard')))

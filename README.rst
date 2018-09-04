@@ -6,6 +6,7 @@ anselm
 requirements
 ============
 
-* couchdb (long-term memory, ltm)
+* couchdb 
+* redis
 * PyQt5
 
