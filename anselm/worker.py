@@ -27,10 +27,7 @@ class Worker(System):
         res = req.json()
         if 'Result' in res:
             self.aset('result', line,  res['Result'])
-            print(res['Result'])
           
-
         if 'ToExchange' in res:
             self.aset('exchange', line, res['ToExchange'])
-            print(res['ToExchange'])
         

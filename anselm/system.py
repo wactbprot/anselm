@@ -49,13 +49,19 @@ class System:
         if isinstance(value, dict) or isinstance(value, list):
             v = json.dumps(value)
 
+        if isinstance(value, str):
+            v = value
+
         self.r.set(k,v)
     
     def aget(self, key_prefix, line):
         k = '{}@{}'.format(key_prefix, line) 
-        v = self.r.get(k)
-
+        
+        return self.r.get(k)
+    
+    def dget(self, key_prefix, line):
+        v = self.aget(key_prefix, line)
+        
         return json.loads(v)
-
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')

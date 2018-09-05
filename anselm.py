@@ -12,7 +12,6 @@ import sys
 
 class Anselm(System):
    
-
     def __init__(self):
         super().__init__()
               
@@ -20,7 +19,7 @@ class Anselm(System):
         self.worker = Worker()
         self.current_grid_line = 1
         self.initUI()
-       
+    
     def initUI(self):
         self.win = QWidget()
         self.win.resize(250, 150)
@@ -41,9 +40,6 @@ class Anselm(System):
     def add_device_line(self):
         self.current_grid_line +=1
         line = self.current_grid_line
-        line_key = self.get_line_key(line)
-
-        self.state[line_key] = {}
         
         run_bttn = self.make_run_bttn(line = line)
         auxobj_combo = self.make_auxobj_combo(line = line)
@@ -112,31 +108,24 @@ class Anselm(System):
     def run_kind_selected(self, combo, line):
 
         run_kind = combo.currentText()
-        line_key = self.get_line_key(line)
-        self.state[line_key]['run_kind'] = run_kind
+        self.aset('run_kind', line, run_kind)
 
     def task_selected(self, combo, line):
 
-        line_key = self.get_line_key(line)
-
-        doc_id = self.state.get(line_key).get('doc_id')
         task_name = combo.currentText()
-        self.state[line_key]['task_name'] = task_name
 
-        self.log.info("task with name {} selected at line {}".format(task_name, line))
-        self.log.debug("state dict: {}".format(self.state))
-        
+        doc_id = self.aget('doc_id', line)
+        self.aset('task_name', line, task_name)
+
         task = self.db.get_task(doc_id, task_name)
-        self.state[line_key]['task'] = task 
+        self.aset('task', line, task) 
         self.log.debug("task: {}".format(task))
+        self.log.info("task with name {} selected at line {}".format(task_name, line))
 
-       
-    
     def auxobj_selected(self, combo, line):
         doc_id = combo.currentText()
-        line_key = self.get_line_key(line)
 
-        self.state[line_key]['doc_id'] = doc_id 
+        self.aset('doc_id', line, doc_id)
 
         self.log.debug("select {} at line {}".format(doc_id, line))
 
@@ -161,30 +150,23 @@ class Anselm(System):
             combo.addItem(item)
         return combo
 
-    def get_line_key(self, line):
-        return 'line_{}'.format(line)
-
     def run_device(self, line):
-        line_key = self.get_line_key(line)
-        task = None
-
-        self.log.info("start device at line {}".format(line))
-        if line_key in self.state:
-            if 'task' in self.state[line_key]:
-                task = self.state[line_key]['task']  
-            else:
-                self.log.error("no task selected at line {}".format(line))
+        self.log.info("try to start device at line {}".format(line))
+        task = self.dget('task', line)
         if task:
             self.log.debug("task is: {}".format(task))
             Thread(target=self.worker.run, args=(task, line,)).start()
         
     def std_selected(self, combo):
-        self.state['standard'] = combo.currentText()
-        self.log.info("select standard {}".format( self.state.get('standard')))
+        standard = combo.currentText()
+
+        self.aset('standard', 0, combo.currentText())
+        self.log.info("select standard {}".format( standard))
 
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     ex = Anselm()
+    sys.exit(Thread(target=ex.run).start())
     sys.exit(app.exec_())
 
