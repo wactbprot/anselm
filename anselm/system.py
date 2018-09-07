@@ -13,7 +13,7 @@ class System:
     max_arg_len = 40
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
     log_level = "DEBUG"
-    state = {}
+   
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.
@@ -40,8 +40,11 @@ class System:
         host = db_dict.get('host')
         db =  db_dict.get('db')
 
-        self.r  =  redis.StrictRedis(host=host, port=port, db=db)
+        self.r=redis.StrictRedis(host=host, port=port, db=db)
         self.log.info("key value store ok")
+
+        self.p = self.r.pubsub()
+        self.log.info("pubsub ok")
 
     def aset(self, key_prefix, line, value):
         k = '{}@{}'.format(key_prefix, line)
@@ -63,5 +66,6 @@ class System:
         v = self.aget(key_prefix, line)
         
         return json.loads(v)
+
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')

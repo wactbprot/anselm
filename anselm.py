@@ -1,29 +1,51 @@
 import sys
 import json
 import argparse
-from threading import Thread
+
 from anselm.system import System # pylint: disable=E0611
 from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
 from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QLabel
-
+from PyQt5.QtCore import QThread, pyqtSignal
 import sys
+
+
+class Observe(QThread, System):
+    signal = pyqtSignal('PyQt_PyObject')
+    def __init__(self):
+        QThread.__init__(self)
+       
+    def run(self):
+        # git clone done, now inform the main thread with the output
+    
+        self.p.subscribe("io")
+        print('Listening redis...')
+        for item in self.p.listen():
+            self.log.debug("received item: {}".format(item))
+            self.signal.emit("kkkkkkk")
 
 
 class Anselm(System):
    
     def __init__(self):
         super().__init__()
-              
+       
         self.db = DB()
         self.worker = Worker()
+        self.observer_thread = Observe()
+        self.observer_thread.signal.connect(self.end_task)
+        self.observer_thread.start()
         self.current_grid_line = 1
         self.initUI()
     
     def initUI(self):
+
         self.win = QWidget()
         self.win.resize(250, 150)
         self.win.setWindowTitle('Anselm')
+        
+       
+        
         self.grid = QGridLayout()
 
         add_device_bttn = QPushButton("add device", self.win)
@@ -35,8 +57,18 @@ class Anselm(System):
         self.add_widget_to_grid(std_select_combo ,1, 1)
         self.add_widget_to_grid(add_device_bttn ,1, 2)
         std_select_combo.currentIndexChanged.connect(lambda: self.std_selected(std_select_combo))
-        self.draw_grid()        
+        self.draw_grid()  
+
+    def run_task(self, line):
+        self.log.info("try to start device at line {}".format(line))
+        self.worker.work_on_line = line
+        self.worker.run()
+    
+    def end_task(self, line):
+        self.log.info("end task at line {}".format(line))
         
+       
+
     def add_device_line(self):
         self.current_grid_line +=1
         line = self.current_grid_line
@@ -56,7 +88,7 @@ class Anselm(System):
 
     def make_run_bttn(self, line):
         run_device_bttn = QPushButton("run", self.win)  
-        run_device_bttn.clicked.connect(lambda: self.run_device(line))
+        run_device_bttn.clicked.connect(lambda: self.run_task(line))
 
         return run_device_bttn
 
@@ -149,14 +181,7 @@ class Anselm(System):
         for item in item_list:
             combo.addItem(item)
         return combo
-
-    def run_device(self, line):
-        self.log.info("try to start device at line {}".format(line))
-        task = self.dget('task', line)
-        if task:
-            self.log.debug("task is: {}".format(task))
-            Thread(target=self.worker.run, args=(task, line,)).start()
-        
+     
     def std_selected(self, combo):
         standard = combo.currentText()
 
@@ -167,6 +192,5 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     ex = Anselm()
-    sys.exit(Thread(target=ex.run).start())
     sys.exit(app.exec_())
 

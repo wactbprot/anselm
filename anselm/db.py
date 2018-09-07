@@ -20,7 +20,7 @@ class DB(System):
         self.db_dict = db_dict
         self.db_srv = couchdb.Server(url)
         self.db = self.db_srv[self.db_dict['database']]
-        self.log.info("long-term memory system ok")
+        self.log.info("database  ok")
 
     def store_doc(self, doc):
         id = doc.get('_id')
