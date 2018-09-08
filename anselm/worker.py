@@ -13,22 +13,23 @@ class Worker(System):
         self.relay_url = "http://{}:{}".format(relay_dict.get('host'), relay_dict.get('port')
         self.headers = {'content-type': 'application/json'}
         
-    def run(self, task):
-        acc = task.get('Action')
 
-        if acc:
-            if acc == "TCP":
-                self.relay_worker(task)
-        else:
-            self.log.error("task contains no action")
+    def run(self, task, line, callback=None):
+        acc = task['Action']
 
-    def relay_worker(self, task):
+        if acc == "TCP":
+            self.relay_worker(task, line, callback)
+        if acc == "VXI11":
+            self.relay_worker(task, line, callback)
+    
+    def relay_worker(self, task, line, callback):
         req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
         res = req.json()
-        
         if 'Result' in res:
-            print(res.get('Result'))
-            print(self.state)
+            if callable(callback):
+                callback(line, res['Result'])
+                print(res['Result'])
+          
 
         if 'ToExchange' in res:
             print(res.get('ToExchange'))

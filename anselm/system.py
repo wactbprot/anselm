@@ -11,6 +11,7 @@ class System:
     """
     max_arg_len = 40
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
+    log_level = "DEBUG"
     state = {}
     def __init__(self):
         """
@@ -23,28 +24,13 @@ class System:
         self.init_log() 
     
     def init_log(self):
+        log_level = self.config.get('loglevel')
         self.log = logging.getLogger()
-        coloredlogs.install(
-            fmt=self.log_fmt, level=self.config["loglevel"], logger=self.log)
+        
+        if log_level is None:
+            log_level = self.log_level
 
-        self.log.info("logging system online")
-
+        coloredlogs.install(fmt=self.log_fmt, level=log_level, logger=self.log)
    
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')
-
-    def parse_body(self, body):
-        do, pl = None, None
-
-        try:
-            res = json.loads(body)
-        except ValueError as error:
-            raise ParseError(error)
-
-        if 'do' in res:
-            do = res['do']
-
-        if 'payload' in res:
-            pl = res['payload']
-
-        return do, pl

@@ -8,7 +8,7 @@
         }    
     },
     "relay":{
-        "host": "i75419.berlin.ptb.de",
+        "host": "localhost",
         "port": 55555
         },
     "loglevel": "DEBUG"
