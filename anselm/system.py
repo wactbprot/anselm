@@ -5,8 +5,6 @@ import datetime
 import time
 import redis
 
-
-
 class System:
     """
     """
@@ -26,6 +24,7 @@ class System:
         self.init_kv() 
     
     def init_log(self):
+    
         log_level = self.config.get('loglevel')
         self.log = logging.getLogger()
         
@@ -35,12 +34,13 @@ class System:
         coloredlogs.install(fmt=self.log_fmt, level=log_level, logger=self.log)
     
     def init_kv(self):
+    
         db_dict = self.config.get('redis')
         port = db_dict.get('port')
         host = db_dict.get('host')
         db =  db_dict.get('db')
 
-        self.r=redis.StrictRedis(host=host, port=port, db=db)
+        self.r = redis.StrictRedis(host=host, port=port, db=db)
         self.log.info("key value store ok")
 
         self.p = self.r.pubsub()

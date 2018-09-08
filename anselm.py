@@ -14,6 +14,7 @@ class Observe(QThread, System):
     signal = pyqtSignal('PyQt_PyObject')
     def __init__(self):
         QThread.__init__(self)
+        System.__init__(self)
        
     def run(self):
         # git clone done, now inform the main thread with the output
@@ -44,8 +45,6 @@ class Anselm(System):
         self.win.resize(250, 150)
         self.win.setWindowTitle('Anselm')
         
-       
-        
         self.grid = QGridLayout()
 
         add_device_bttn = QPushButton("add device", self.win)
@@ -66,8 +65,6 @@ class Anselm(System):
     
     def end_task(self, line):
         self.log.info("end task at line {}".format(line))
-        
-       
 
     def add_device_line(self):
         self.current_grid_line +=1
@@ -94,7 +91,7 @@ class Anselm(System):
 
     def make_result_label(self, line, text):
         result_textbox = QLabel(self.win)
-        #result_textbox.resize(280,40)
+        result_textbox.resize(280,40)
         result_textbox.setText("-----------")
         
         return result_textbox
@@ -193,4 +190,3 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = Anselm()
     sys.exit(app.exec_())
-

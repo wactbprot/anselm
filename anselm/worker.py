@@ -42,5 +42,7 @@ class Worker(System):
           
         if 'ToExchange' in res:
             self.aset('exchange', line, res['ToExchange'])
+            
+        self.r.publish('io', line)
         
        

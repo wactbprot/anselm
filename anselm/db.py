@@ -2,7 +2,6 @@ from anselm.system import System
 import couchdb
 import json
 
-
 class DB(System):
 
     def __init__(self):
@@ -78,8 +77,6 @@ class DB(System):
         else:
             self.log.error("no doc with id {}".format(doc_id))
             return []
-       
-     
 
     def get_auxobj(self, id):
         doc = self.db[id]
