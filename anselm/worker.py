@@ -1,6 +1,8 @@
+import time
 import requests
 import json
 from anselm.system import System
+from _thread import start_new_thread
 
 
 class Worker(System):
@@ -27,6 +29,8 @@ class Worker(System):
                 self.relay_worker(task, line)
             if acc == "VXI11":
                 self.relay_worker(task, line)
+            if acc == "wait":
+                start_new_thread( self.wait_worker, (task, line))
         
             self.work_on_line = None
         else:
@@ -35,14 +39,24 @@ class Worker(System):
     def relay_worker(self, task, line):
         req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
         res = req.json()
-        print(res)
+
         if 'Result' in res:
             self.aset('result', line,  res['Result'])
-            
           
         if 'ToExchange' in res:
             self.aset('exchange', line, res['ToExchange'])
-            
+
         self.r.publish('io', line)
         
-       
+    def wait_worker(self, task, line):
+        print("start---")
+        time.sleep(5)
+        print("end---")
+
+        self.r.publish('io', line)
+        
+
+
+
+
+
