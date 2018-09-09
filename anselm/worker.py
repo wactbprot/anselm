@@ -41,16 +41,16 @@ class Worker(System):
         res = req.json()
 
         if 'Result' in res:
-            self.aset('result', line,  res['Result'])
+            self.aset('result', line,  res['Result'], expire=True)
           
         if 'ToExchange' in res:
-            self.aset('exchange', line, res['ToExchange'])
+            self.aset('exchange', line, res['ToExchange'], expire=True)
 
         self.r.publish('io', line)
         
     def wait_worker(self, task, line):
         time.sleep(5)
-        self.aset('result', line,  [{'completed':True}])
+        self.aset('result', line,  [{'completed':True}], expire=True)
 
         self.r.publish('io', line)
         

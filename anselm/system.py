@@ -46,7 +46,7 @@ class System:
         self.p = self.r.pubsub()
         self.log.info("pubsub ok")
 
-    def aset(self, key_prefix, line, value):
+    def aset(self, key_prefix, line, value, expire=False):
         k = '{}@{}'.format(key_prefix, line)
         
         if isinstance(value, dict) or isinstance(value, list):
@@ -56,7 +56,9 @@ class System:
             v = value
 
         self.r.set(k,v)
-    
+        if expire:
+            self.r.pexpire(k, 10000)
+
     def aget(self, key_prefix, line):
         k = '{}@{}'.format(key_prefix, line) 
         
