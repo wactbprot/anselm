@@ -49,9 +49,8 @@ class Worker(System):
         self.r.publish('io', line)
         
     def wait_worker(self, task, line):
-        print("start---")
         time.sleep(5)
-        print("end---")
+        self.aset('result', line,  [{'completed':True}])
 
         self.r.publish('io', line)
         

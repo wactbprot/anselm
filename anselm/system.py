@@ -40,7 +40,7 @@ class System:
         host = db_dict.get('host')
         db =  db_dict.get('db')
 
-        self.r = redis.StrictRedis(host=host, port=port, db=db)
+        self.r = redis.StrictRedis(host=host, port=port, db=db, decode_responses=True)
         self.log.info("key value store ok")
 
         self.p = self.r.pubsub()
