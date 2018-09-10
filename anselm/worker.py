@@ -47,13 +47,17 @@ class Worker(System):
             self.aset('exchange', line, res['ToExchange'], expire=True)
 
         self.r.publish('io', line)
-        
+        time.sleep(self.expire_time * (1+0.1))
+        self.r.publish('io', line)
+
     def wait_worker(self, task, line):
         time.sleep(5)
         self.aset('result', line,  [{'completed':True}], expire=True)
 
         self.r.publish('io', line)
-        
+        time.sleep(self.expire_time * (1+0.1))
+        self.r.publish('io', line)
+
 
 
 

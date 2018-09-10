@@ -37,6 +37,14 @@ class DB(System):
         
         return [doc.get('id') for doc in self.db.view(view)]
     
+    def get_cal_ids(self):         
+        view = self.db_dict.get('view').get('calids')
+        year = self.aget('year',0)
+        standard = self.aget('standard',0)
+        print(year)
+        return [doc.get('id') for doc in self.db.view(view, key ="{}_{}".format(year, standard))]
+    
+
     def get_red_doc(self, doc_id):
         doc = self.db[doc_id]
         red_doc = None

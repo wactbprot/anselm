@@ -4,7 +4,8 @@
         "port": 5984,
         "database": "vl_db",
         "view": {
-            "auxobj": "share/AuxObject"
+            "auxobj": "share/AuxObject",
+            "calids": "share/Year_Standard-Type_Certificate_Issue"
         }    
     },"redis":{
         "host": "localhost",

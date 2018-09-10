@@ -9,6 +9,7 @@ class System:
     """
     """
     max_arg_len = 40
+    expire_time = 5000 #ms
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
     log_level = "DEBUG"
    
@@ -57,7 +58,7 @@ class System:
 
         self.r.set(k,v)
         if expire:
-            self.r.pexpire(k, 10000)
+            self.r.pexpire(k, self.expire_time)
 
     def aget(self, key_prefix, line):
         k = '{}@{}'.format(key_prefix, line) 

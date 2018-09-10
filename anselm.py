@@ -39,17 +39,20 @@ class Anselm(System):
         self.init_ui()
     
     def init_ui(self):
-        # head line
-        self.std_col = 2
-        self.add_device_btn_col = 1
-        # device lines
-        self.auxobj_col = 1
-        self.task_col = 2
-        self.run_kind_col = 3
-        self.run_btn_col = 4       
-        self.result_col= 5
-
         self.current_grid_line = 1
+        # head line
+        self.std_col = 1
+        self.year_col = 2
+        self.add_device_btn_col = 3
+
+        # device lines
+        self.cal_id_col = 1
+        self.auxobj_col = 2
+        self.task_col = 3
+        self.run_kind_col = 4
+        self.run_btn_col = 5      
+        self.result_col= 6
+
         
         self.win = QWidget()
         self.win.resize(250, 150)
@@ -59,15 +62,18 @@ class Anselm(System):
 
         add_device_bttn = QPushButton("add device", self.win)
         add_device_bttn.clicked.connect(self.add_device_line)
+        self.add_widget_to_grid(add_device_bttn ,self.current_grid_line, self.add_device_btn_col)
       
         std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
         std_select_combo = self.make_combo(std_select, first_item = None) 
-
         self.add_widget_to_grid(std_select_combo ,self.current_grid_line, self.std_col)
-        self.add_widget_to_grid(add_device_bttn ,self.current_grid_line, self.add_device_btn_col)
- 
         std_select_combo.currentIndexChanged.connect(lambda: self.std_selected(std_select_combo))
- 
+
+        year_select = ["2017", "2018", "2019"]
+        year_select_combo = self.make_combo(year_select, first_item = None) 
+        self.add_widget_to_grid(year_select_combo ,self.current_grid_line, self.year_col)
+        year_select_combo.currentIndexChanged.connect(lambda: self.year_selected(year_select_combo))
+
         self.draw_grid()  
 
     def add_widget_to_grid(self, widget, line, col):
@@ -101,6 +107,7 @@ class Anselm(System):
     def add_device_line(self):
         self.current_grid_line +=1
         line = self.current_grid_line
+        self.add_widget_to_grid(self.make_cal_id_combo(line = line), line, self.cal_id_col)
         self.add_widget_to_grid(self.make_auxobj_combo(line = line), line, self.auxobj_col)
         self.draw_grid()
 
@@ -135,11 +142,11 @@ class Anselm(System):
 
         return c
    
-    def make_calib_id_combo(self, line):
+    def make_cal_id_combo(self, line):
        
-        run_kinds = ["single", "loop"]
-        c = self.make_combo(run_kinds, first_item = None) 
-        c.currentIndexChanged.connect(lambda: self.run_kind_selected(c, line))
+        cal_ids = self.db.get_cal_ids()
+        c = self.make_combo(cal_ids, first_item = None) 
+        c.currentIndexChanged.connect(lambda: self.cal_id_selected(c, line))
 
         return c
    
@@ -195,12 +202,24 @@ class Anselm(System):
         task_combo = self.make_task_combo(doc_id = doc_id, line = line)
         self.add_widget_to_grid(widget=task_combo, line=line, col=self.task_col)
         self.draw_grid()
-     
+    
+    def cal_id_selected(self, combo, line):
+        cal_id = combo.currentText()
+
+        self.aset('calid', line, combo.currentText())
+
+        self.log.info("select calibration id {}".format( cal_id )) 
     def std_selected(self, combo):
         standard = combo.currentText()
 
         self.aset('standard', 0, combo.currentText())
         self.log.info("select standard {}".format( standard))
+    
+    def year_selected(self, combo):
+        year = combo.currentText()
+
+        self.aset('year', 0, combo.currentText())
+        self.log.info("select year {}".format( year ))
 
 if __name__ == '__main__':
 
