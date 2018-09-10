@@ -26,9 +26,9 @@ class Worker(System):
             acc = task['Action']
 
             if acc == "TCP":
-                self.relay_worker(task, line)
+                 start_new_thread( self.relay_worker, (task, line))
             if acc == "VXI11":
-                self.relay_worker(task, line)
+                 start_new_thread( self.relay_worker, (task, line))
             if acc == "wait":
                 start_new_thread( self.wait_worker, (task, line))
         

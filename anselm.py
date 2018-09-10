@@ -39,8 +39,10 @@ class Anselm(System):
         self.init_ui()
     
     def init_ui(self):
+        # head line
         self.std_col = 2
         self.add_device_btn_col = 1
+        # device lines
         self.auxobj_col = 1
         self.task_col = 2
         self.run_kind_col = 3
@@ -113,8 +115,13 @@ class Anselm(System):
         return b
 
     def make_result_label(self, line):
-        l = QLabel(self.win)
-        l.resize(80,40)
+        widget_item = self.grid.itemAtPosition (line, self.result_col)
+        if widget_item:
+            l = widget_item.widget()
+        else:
+            l = QLabel(self.win)
+            l.resize(80,40)
+        
         result = self.aget('result', line)
         l.setText(result)
         
