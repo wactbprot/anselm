@@ -35,6 +35,21 @@ class Anselm(System):
     dut_branches = ["dut-a", "dut-b", "dut-c"]
     run_kinds = ["single", "loop"]
     
+    current_grid_line = 1
+    add_device_btn_col = 1
+    std_col = 2
+    year_col = 3
+    cal_id_col = 2
+    fullscale_col = 3
+    dut_branch_col = 4     
+    auxobj_col = 5
+    task_col = 6
+    run_kind_col = 7
+    run_btn_col = 8
+    result_col= 1
+    line_heigth = 28
+    long_line = 350
+        
     def __init__(self):
         super().__init__()
        
@@ -46,45 +61,38 @@ class Anselm(System):
         self.init_ui()
     
     def init_ui(self):
-        self.current_grid_line = 1
-        # head line
-        self.add_device_btn_col = 1
-        self.std_col = 2
-        self.year_col = 3
         
-        # device lines
-        self.cal_id_col = 2
-        self.fullscale_col = 3
-        self.dut_branch_col = 4     
-        self.auxobj_col = 5
-        self.task_col = 6
-        self.run_kind_col = 7
-        self.run_btn_col = 8
-        self.result_col= 1
-
-        self.line_heigth = 28
-        self.long_line = 350
         self.win = QWidget()
         self.win.closeEvent = self.closeEvent
         self.grid = QGridLayout(self.win)
 
-        add_device_bttn = QPushButton("add device", self.win)
-        add_device_bttn.setFixedSize(self.long_line, self.line_heigth)
-        add_device_bttn.clicked.connect(self.add_device_line)
-        self.add_widget_to_grid(add_device_bttn ,self.current_grid_line, self.add_device_btn_col)
-      
-        std_select_combo = self.make_combo(self.std_select) 
-       
-        self.add_widget_to_grid(std_select_combo ,self.current_grid_line, self.std_col)
-        std_select_combo.currentIndexChanged.connect(lambda: self.std_selected(std_select_combo))
-
-        year_select_combo = self.make_combo(self.year_select) 
-        self.add_widget_to_grid(year_select_combo ,self.current_grid_line, self.year_col)
-        year_select_combo.currentIndexChanged.connect(lambda: self.year_selected(year_select_combo))
+        self.add_widget_to_grid(self.make_add_device_button(), self.current_grid_line, self.add_device_btn_col)
+        self.add_widget_to_grid(self.make_std_combo(),self.current_grid_line, self.std_col)
+        self.add_widget_to_grid(self.make_year_combo() ,self.current_grid_line, self.year_col)
 
         self.draw_grid()  
    
-   
+    def make_add_device_button(self):
+
+        b = QPushButton("add device", self.win)
+        b.setStyleSheet("background-color: yellow")
+        b.setFixedSize(self.long_line, self.line_heigth)
+        b.clicked.connect(self.add_device_line)
+
+        return b
+
+    def make_std_combo(self):
+        c = self.make_combo(self.std_select)
+        c.currentIndexChanged.connect(lambda: self.std_selected(c))
+        
+        return c
+
+    def make_year_combo(self):
+        c = self.make_combo(self.year_select)
+        c.currentIndexChanged.connect(lambda: self.year_selected(c))
+        
+        return c
+
     def add_widget_to_grid(self, widget, line, col):
 
         #old_widget_item = self.grid.itemAtPosition (line, col)
@@ -143,13 +151,13 @@ class Anselm(System):
         else:
             l = QPlainTextEdit(self.win)
             l.setFixedSize(self.long_line, self.line_heigth*4)
- 
+        l.setStyleSheet("background-color: lightyellow")
         result = self.aget('result', line)
         if result:
             txt = str(result)
             txt = txt.replace(",", ",\n")
         else:
-            txt = "raw output"
+            txt = ""
 
         l.setPlainText("{}".format(txt))
        
@@ -190,7 +198,7 @@ class Anselm(System):
        
         self.log.debug("found following auxobj ids {}".format(aux_obj_ids))
        
-        c = self.make_combo(aux_obj_ids, first_item=False, last_item=False) 
+        c = self.make_combo(aux_obj_ids, first_item=True, last_item=False) 
         c.currentIndexChanged.connect(lambda: self.auxobj_selected(c, line))
 
         return c
@@ -198,7 +206,7 @@ class Anselm(System):
     def make_task_combo(self, doc_id, line):
         task_names = self.db.get_task_names(doc_id = doc_id)
         self.log.debug("found following tasknames {}".format(task_names))
-        c = self.make_combo(task_names, first_item=False, last_item=False) 
+        c = self.make_combo(task_names, first_item=True, last_item=False) 
         c.currentIndexChanged.connect(lambda: self.task_selected(c, line))
 
         return c
