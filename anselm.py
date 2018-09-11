@@ -1,92 +1,197 @@
 import sys
 import json
-import argparse
-from threading import Thread
+
 from anselm.system import System # pylint: disable=E0611
 from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
-from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QLabel
-
+from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QPlainTextEdit
+from PyQt5.QtCore import QThread, pyqtSignal , Qt
 import sys
 
 
-class Anselm(System):
-   
+class Observe(QThread, System):
+    signal = pyqtSignal('PyQt_PyObject')
+    def __init__(self):
+        QThread.__init__(self)
+        System.__init__(self)
+       
+    def run(self):
+        # git clone done, now inform the main thread with the output
+    
+        self.p.subscribe("io")
+        print('Listening redis...')
+        for item in self.p.listen():
+            self.log.debug("received item: {}".format(item))
+            if item['type'] == 'message':            
+                self.signal.emit(int(item['data']))
 
+
+class Anselm(System):
+    fullscale = ["SRG", "0.1mbar", "0.25mbar","1mbar", 
+                "10mbar", "100mbar", "1000mbar", "0.1Torr", 
+                "1Torr", "10Torr", "100Torr", "1000Torr"]
+    std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
+    year_select = ["2017", "2018", "2019"]
+    dut_branches = ["dut-a", "dut-b", "dut-c"]
+    run_kinds = ["single", "loop"]
+    
+    current_grid_line = 1
+    add_device_btn_col = 1
+    std_col = 2
+    year_col = 3
+    cal_id_col = 2
+    fullscale_col = 3
+    dut_branch_col = 4     
+    auxobj_col = 5
+    task_col = 6
+    run_kind_col = 7
+    run_btn_col = 8
+    result_col= 1
+    line_heigth = 28
+    long_line = 350
+        
     def __init__(self):
         super().__init__()
-              
+       
         self.db = DB()
         self.worker = Worker()
-        self.current_grid_line = 1
-        self.initUI()
-       
-    def initUI(self):
-        self.win = QWidget()
-        self.win.resize(250, 150)
-        self.win.setWindowTitle('Anselm')
-        self.grid = QGridLayout()
-
-        add_device_bttn = QPushButton("add device", self.win)
-        add_device_bttn.clicked.connect(self.add_device_line)
-      
-        std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
-        std_select_combo = self.make_combo(std_select, first_item = None) 
-
-        self.add_widget_to_grid(std_select_combo ,1, 1)
-        self.add_widget_to_grid(add_device_bttn ,1, 2)
-        std_select_combo.currentIndexChanged.connect(lambda: self.std_selected(std_select_combo))
-        self.draw_grid()        
+        self.observer_thread = Observe()
+        self.observer_thread.signal.connect(self.end_task)
+        self.observer_thread.start()
+        self.init_ui()
+    
+    def init_ui(self):
         
+        self.win = QWidget()
+        self.win.closeEvent = self.closeEvent
+        self.grid = QGridLayout(self.win)
+
+        self.add_widget_to_grid(self.make_add_device_button(), self.current_grid_line, self.add_device_btn_col)
+        self.add_widget_to_grid(self.make_std_combo(),self.current_grid_line, self.std_col)
+        self.add_widget_to_grid(self.make_year_combo() ,self.current_grid_line, self.year_col)
+
+        self.draw_grid()  
+   
+    def make_add_device_button(self):
+
+        b = QPushButton("add device", self.win)
+        b.setStyleSheet("background-color: yellow")
+        b.setFixedSize(self.long_line, self.line_heigth)
+        b.clicked.connect(self.add_device_line)
+
+        return b
+
+    def make_std_combo(self):
+        c = self.make_combo(self.std_select)
+        c.currentIndexChanged.connect(lambda: self.std_selected(c))
+        
+        return c
+
+    def make_year_combo(self):
+        c = self.make_combo(self.year_select)
+        c.currentIndexChanged.connect(lambda: self.year_selected(c))
+        
+        return c
+
+    def add_widget_to_grid(self, widget, line, col):
+
+        #old_widget_item = self.grid.itemAtPosition (line, col)
+        #old_widget = old_widget_item.widget()
+        
+        self.grid.addWidget(widget, line, col)
+
+    def make_combo(self, item_list, first_item=True, last_item=True):
+        c = QComboBox(self.win)
+
+        if first_item:
+            c.addItem(self.first_item)
+        
+        for item in item_list:
+            c.addItem(item)
+        
+        if last_item:
+            c.addItem(self.last_item)
+        return c
+
+    def run_task(self, line):
+        self.log.info("try to start device at line {}".format(line))
+        self.worker.work_on_line = line
+        self.worker.run()
+    
+    def end_task(self, line):
+        self.add_widget_to_grid(self.make_result_label(line = line), line, self.result_col)
+
+        self.log.info("end task at line {}".format(line))
+
     def add_device_line(self):
         self.current_grid_line +=1
         
         line = self.current_grid_line
-        line_key = self.get_line_key(line)
+        self.add_widget_to_grid(self.make_cal_id_combo(line = line), line, self.cal_id_col)
+        self.add_widget_to_grid(self.make_auxobj_combo(line = line), line, self.auxobj_col)
+        self.add_widget_to_grid(self.make_fullscale_combo(line = line), line, self.fullscale_col)
+        self.add_widget_to_grid(self.make_dut_branch_combo(line = line), line, self.dut_branch_col)
+        self.add_widget_to_grid(self.make_result_label(line = line), line, self.result_col)
 
-        self.state[line_key] = {}
-        
-        run_bttn = self.make_run_bttn(line = line)
-        auxobj_combo = self.make_auxobj_combo(line = line)
-        run_kind_combo = self.make_run_kind_combo(line = line)
-
-        self.add_widget_to_grid(run_bttn, line, 1)
-        self.add_widget_to_grid(run_kind_combo, line, 2)
-        self.add_widget_to_grid(auxobj_combo, line, 3)
-        self.draw_grid()
 
     def draw_grid(self):
         self.win.setLayout(self.grid)
+        self.win.setWindowTitle('Anselm')
         self.win.show()
 
     def make_run_bttn(self, line):
-        run_device_bttn = QPushButton("run", self.win)  
-        run_device_bttn.clicked.connect(lambda: self.run_device(line))
+        b = QPushButton("run", self.win)  
+        b.clicked.connect(lambda: self.run_task(line))
 
-        return run_device_bttn
+        return b
 
-    def make_result_label(self, line, text):
-        result_textbox = QLabel(self.win)
-        #result_textbox.resize(280,40)
-        result_textbox.setText("-----------")
-        
-        return result_textbox
+    def make_result_label(self, line):
+        widget_item = self.grid.itemAtPosition (line, self.result_col)
+        if widget_item:
+            l = widget_item.widget()
+        else:
+            l = QPlainTextEdit(self.win)
+            l.setFixedSize(self.long_line, self.line_heigth*4)
+        l.setStyleSheet("background-color: lightyellow")
+        result = self.aget('result', line)
+        if result:
+            txt = str(result)
+            txt = txt.replace(",", ",\n")
+        else:
+            txt = ""
+
+        l.setPlainText("{}".format(txt))
+       
+        return l
 
     def make_run_kind_combo(self, line):
        
-        run_kinds = ["single", "loop"]
-        combo = self.make_combo(run_kinds, first_item = None) 
-        combo.currentIndexChanged.connect(lambda: self.run_kind_selected(combo, line))
+        c = self.make_combo(self.run_kinds, first_item=False, last_item=False) 
+        c.currentIndexChanged.connect(lambda: self.run_kind_selected(c, line))
 
-        return combo
+        return c
    
-    def make_calib_id_combo(self, line):
+    def make_dut_branch_combo(self, line):
        
-        run_kinds = ["single", "loop"]
-        combo = self.make_combo(run_kinds, first_item = None) 
-        combo.currentIndexChanged.connect(lambda: self.run_kind_selected(combo, line))
+        c = self.make_combo(self.dut_branches) 
+        c.currentIndexChanged.connect(lambda: self.dut_branch_selected(c, line))
 
-        return combo
+        return c
+
+    def make_fullscale_combo(self, line):
+       
+        c = self.make_combo(self.fullscale) 
+        c.currentIndexChanged.connect(lambda: self.fullscale_selected(c, line))
+
+        return c
+
+    def make_cal_id_combo(self, line):
+       
+        cal_ids = self.db.get_cal_ids()
+        c = self.make_combo(cal_ids) 
+        c.currentIndexChanged.connect(lambda: self.cal_id_selected(c, line))
+
+        return c
    
     def make_auxobj_combo(self, line):
        
@@ -94,54 +199,52 @@ class Anselm(System):
        
         self.log.debug("found following auxobj ids {}".format(aux_obj_ids))
        
-        combo = self.make_combo(aux_obj_ids) 
-        combo.currentIndexChanged.connect(lambda: self.auxobj_selected(combo, line))
+        c = self.make_combo(aux_obj_ids, first_item=True, last_item=False) 
+        c.currentIndexChanged.connect(lambda: self.auxobj_selected(c, line))
 
-        return combo
+        return c
     
     def make_task_combo(self, doc_id, line):
-       
         task_names = self.db.get_task_names(doc_id = doc_id)
-       
         self.log.debug("found following tasknames {}".format(task_names))
-       
-        combo = self.make_combo(task_names) 
-        combo.currentIndexChanged.connect(lambda: self.task_selected(combo, line))
+        c = self.make_combo(task_names, first_item=True, last_item=False) 
+        c.currentIndexChanged.connect(lambda: self.task_selected(c, line))
 
-        return combo
+        return c
 
     def run_kind_selected(self, combo, line):
-
         run_kind = combo.currentText()
-        line_key = self.get_line_key(line)
-        self.state[line_key]['run_kind'] = run_kind
+        self.aset('run_kind', line, run_kind)
 
     def task_selected(self, combo, line):
-
-        line_key = self.get_line_key(line)
-
-        doc_id = self.state.get(line_key).get('doc_id')
         task_name = combo.currentText()
-        self.state[line_key]['task_name'] = task_name
-
-        self.log.info("task with name {} selected at line {}".format(task_name, line))
-        self.log.debug("state dict: {}".format(self.state))
-        
+        doc_id = self.aget('doc_id', line)
+        self.aset('task_name', line, task_name)
         task = self.db.get_task(doc_id, task_name)
-        self.state[line_key]['task'] = task 
+        self.aset('task', line, task) 
+        
+        # add elements for next actions
+        self.add_widget_to_grid(self.make_run_bttn(line=line), line, self.run_btn_col)
+        self.add_widget_to_grid(self.make_run_kind_combo(line=line), line, self.run_kind_col)
+ 
         self.log.debug("task: {}".format(task))
+        self.log.info("task with name {} selected at line {}".format(task_name, line))
 
-       
-    
     def auxobj_selected(self, combo, line):
 
         doc_id = combo.currentText()
-        line_key = self.get_line_key(line)
-
-        self.state[line_key]['doc_id'] = doc_id 
-
+        self.aset('doc_id', line, doc_id)
         self.log.debug("select {} at line {}".format(doc_id, line))
+        task_combo = self.make_task_combo(doc_id = doc_id, line = line)
+        self.add_widget_to_grid(widget=task_combo, line=line, col=self.task_col)
+        #self.draw_grid()
+    
+    def cal_id_selected(self, combo, line):
+        cal_id = combo.currentText()
+        self.aset('calid', line, cal_id)
+        self.log.info("select calibration id {}".format( cal_id )) 
 
+<<<<<<< HEAD
         auxobj_combo = self.make_task_combo(doc_id = doc_id, line = line)
         self.add_widget_to_grid(widget=auxobj_combo, line=line, col=4)
         self.draw_grid()
@@ -189,13 +292,37 @@ class Anselm(System):
         for _, result in enumerate(results):
             text = "{} {} {}".format(text,result.get('Value'), result.get('Unit'))
         print(text)
+=======
+    def fullscale_selected(self, combo, line):
+        fs = combo.currentText()
+        self.aset('fullscale', line, fs)
+        self.log.info("select fullscale {}".format( fs ))
+
+    def dut_branch_selected(self, combo, line):
+        dut = combo.currentText()
+        self.aset('dut_branch', line, dut)
+        self.log.info("device at line {} attached to {}".format(line,  dut ))
+>>>>>>> fd96be8c9f82651cda1fe7464b8422534e2aac32
 
     def std_selected(self, combo):
-        self.state['standard'] = combo.currentText()
-        self.log.info("select standard {}".format( self.state.get('standard')))
+        standard = combo.currentText()
+        self.aset('standard', 0,  standard )
+        self.log.info("select standard {}".format( standard))
+    
+    def year_selected(self, combo):
+        year = combo.currentText()
+        self.aset('year', 0, year)
+        self.log.info("select year {}".format( year ))
+
+    def closeEvent(self, event):
+        self.log.info("flush redis database")
+        self.r.flushdb()
+        if True:
+            event.accept()
+        else:
+            event.ignore()
 
 if __name__ == '__main__':
-
     app = QApplication(sys.argv)
-    ex = Anselm()
+    Anselm()
     sys.exit(app.exec_())

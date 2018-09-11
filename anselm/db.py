@@ -2,7 +2,6 @@ from anselm.system import System
 import couchdb
 import json
 
-
 class DB(System):
 
     def __init__(self):
@@ -20,7 +19,7 @@ class DB(System):
         self.db_dict = db_dict
         self.db_srv = couchdb.Server(url)
         self.db = self.db_srv[self.db_dict['database']]
-        self.log.info("long-term memory system ok")
+        self.log.info("database  ok")
 
     def store_doc(self, doc):
         id = doc.get('_id')
@@ -38,6 +37,14 @@ class DB(System):
         
         return [doc.get('id') for doc in self.db.view(view)]
     
+    def get_cal_ids(self):         
+        view = self.db_dict.get('view').get('calids')
+        year = self.aget('year',0)
+        standard = self.aget('standard',0)
+        print(year)
+        return [doc.get('id') for doc in self.db.view(view, key ="{}_{}".format(year, standard))]
+    
+
     def get_red_doc(self, doc_id):
         doc = self.db[doc_id]
         red_doc = None
@@ -78,8 +85,6 @@ class DB(System):
         else:
             self.log.error("no doc with id {}".format(doc_id))
             return []
-       
-     
 
     def get_auxobj(self, id):
         doc = self.db[id]
