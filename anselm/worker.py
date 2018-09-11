@@ -16,7 +16,7 @@ class Worker(System):
         
 
     def run(self):
-        """The memeber workomline is set ba anselm
+        """The member workonline is set ba anselm
         before the thread is start.
         """
         if self.work_on_line:
@@ -26,37 +26,48 @@ class Worker(System):
             acc = task['Action']
 
             if acc == "TCP":
-                 start_new_thread( self.relay_worker, (task, line))
+                worker =  self.relay_worker   
             if acc == "VXI11":
-                 start_new_thread( self.relay_worker, (task, line))
+                worker =  self.relay_worker   
             if acc == "wait":
-                start_new_thread( self.wait_worker, (task, line))
+                worker =  self.wait_worker                   
+
         
+            start_new_thread( worker, (task, line))
             self.work_on_line = None
         else:
-            self.log.error("member work_on_line not set")
+            self.log.error("member var: work_on_line not set")
 
     def relay_worker(self, task, line):
-        req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
-        res = req.json()
+        repeat = True
+        while repeat:
+            req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
+            res = req.json()
 
-        if 'Result' in res:
-            self.aset('result', line,  res['Result'], expire=True)
-          
-        if 'ToExchange' in res:
-            self.aset('exchange', line, res['ToExchange'], expire=True)
+            if 'Result' in res:
+                self.aset('result', line,  res['Result'], expire=False)
 
-        self.r.publish('io', line)
-        time.sleep(self.expire_time /1000 * (1+0.1))
-        self.r.publish('io', line)
+            if 'ToExchange' in res:
+                self.aset('exchange', line, res['ToExchange'], expire=False)
+
+            self.log.debug("values written")
+            self.r.publish('io', line)
+
+            run_kind = self.aget('run_kind', line)
+            self.log.debug("run_kind is {}".format(run_kind))
+            if run_kind == 'loop':
+                repeat = True
+            else:
+                repeat = False
+                break
 
     def wait_worker(self, task, line):
         time.sleep(5)
         self.aset('result', line,  [{'completed':True}], expire=True)
+        self.r.publish('io', line)
 
-        self.r.publish('io', line)
-        time.sleep(self.expire_time / 1000 * (1+0.1))
-        self.r.publish('io', line)
+
+
 
 
 

@@ -8,8 +8,7 @@ import redis
 class System:
     """
     """
-    max_arg_len = 40
-    expire_time = 5000 #ms
+    expire_time = 10000 #ms
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
     log_level = "DEBUG"
    

@@ -63,12 +63,13 @@ class Anselm(System):
         self.result_col= 1
 
         self.line_heigth = 28
-        
+        self.long_line = 350
         self.win = QWidget()
+        self.win.closeEvent = self.closeEvent
         self.grid = QGridLayout(self.win)
 
         add_device_bttn = QPushButton("add device", self.win)
-        add_device_bttn.setFixedSize(450, self.line_heigth)
+        add_device_bttn.setFixedSize(self.long_line, self.line_heigth)
         add_device_bttn.clicked.connect(self.add_device_line)
         self.add_widget_to_grid(add_device_bttn ,self.current_grid_line, self.add_device_btn_col)
       
@@ -82,7 +83,8 @@ class Anselm(System):
         year_select_combo.currentIndexChanged.connect(lambda: self.year_selected(year_select_combo))
 
         self.draw_grid()  
-
+   
+   
     def add_widget_to_grid(self, widget, line, col):
 
         #old_widget_item = self.grid.itemAtPosition (line, col)
@@ -135,7 +137,7 @@ class Anselm(System):
             l = widget_item.widget()
         else:
             l = QPlainTextEdit(self.win)
-            l.setFixedSize(450, self.line_heigth*2)
+            l.setFixedSize(self.long_line, self.line_heigth*3)
  
         result = self.aget('result', line)
         if result:
@@ -246,7 +248,15 @@ class Anselm(System):
         self.aset('year', 0, year)
         self.log.info("select year {}".format( year ))
 
+    def closeEvent(self, event):
+        self.log.info("flush redis database")
+        self.r.flushdb()
+        if True:
+            event.accept()
+        else:
+            event.ignore()
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = Anselm()
+    Anselm()
     sys.exit(app.exec_())
