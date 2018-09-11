@@ -244,55 +244,6 @@ class Anselm(System):
         self.aset('calid', line, cal_id)
         self.log.info("select calibration id {}".format( cal_id )) 
 
-<<<<<<< HEAD
-        auxobj_combo = self.make_task_combo(doc_id = doc_id, line = line)
-        self.add_widget_to_grid(widget=auxobj_combo, line=line, col=4)
-        self.draw_grid()
-
-    def add_widget_to_grid(self, widget, line, col):
-
-        #old_widget_item = self.grid.itemAtPosition (line, col)
-        #old_widget = old_widget_item.widget()
-        
-        self.grid.addWidget(widget, line, col)
-
-    def make_combo(self, item_list, first_item='select'):
-
-        combo = QComboBox(self.win)
-
-        if first_item:
-            combo.addItem(first_item)
-
-        for item in item_list:
-            combo.addItem(item)
-        return combo
-
-    def get_line_key(self, line):
-
-        return 'line_{}'.format(line)
-
-    def run_device(self, line):
-
-        line_key = self.get_line_key(line)
-        task = None
-
-        self.log.info("start device at line {}".format(line))
-        if line_key in self.state:
-            if 'task' in self.state[line_key]:
-                task = self.state.get(line_key).get('task')  
-            else:
-                self.log.error("no task selected at line {}".format(line))
-        if task:
-            self.log.debug("task is: {}".format(task))
-            Thread(target=self.worker.run, args=(task, line, self.result_callback)).start()
-
-    def result_callback(self, line, results):
-        self.log.info('result: {} at line {}'.format(results, line))
-        text = ""
-        for _, result in enumerate(results):
-            text = "{} {} {}".format(text,result.get('Value'), result.get('Unit'))
-        print(text)
-=======
     def fullscale_selected(self, combo, line):
         fs = combo.currentText()
         self.aset('fullscale', line, fs)
@@ -302,7 +253,6 @@ class Anselm(System):
         dut = combo.currentText()
         self.aset('dut_branch', line, dut)
         self.log.info("device at line {} attached to {}".format(line,  dut ))
->>>>>>> fd96be8c9f82651cda1fe7464b8422534e2aac32
 
     def std_selected(self, combo):
         standard = combo.currentText()
