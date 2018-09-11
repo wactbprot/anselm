@@ -11,7 +11,8 @@ class System:
     expire_time = 10000 #ms
     log_fmt = '%(asctime)s,%(msecs)03d %(hostname)s %(filename)s:%(lineno)s %(levelname)s %(message)s'
     log_level = "DEBUG"
-   
+    first_item ="select"   
+    last_item = "remove"
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.
@@ -55,7 +56,11 @@ class System:
         if isinstance(value, str):
             v = value
 
-        self.r.set(k,v)
+        if v == self.first_item or v == self.last_item:
+            self.r.delete(k)
+        else:
+            self.r.set(k,v)
+
         if expire:
             self.r.pexpire(k, self.expire_time)
 

@@ -25,10 +25,9 @@ class Worker(System):
 
             acc = task['Action']
 
-            if acc == "TCP":
+            if acc == "TCP" or acc == "VXI11" or  acc == "MODBUS":
                 worker =  self.relay_worker   
-            if acc == "VXI11":
-                worker =  self.relay_worker   
+                
             if acc == "wait":
                 worker =  self.wait_worker                   
 
