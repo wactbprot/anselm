@@ -37,6 +37,7 @@ setup(
                     'coloredlogs',
                     'redis',
                     'flask',
+                    'requests',
                     ],
     #extras_require={
     #    'dev': ['sphinx',

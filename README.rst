@@ -1,16 +1,6 @@
 anselm
 ======
 
-start the system with:
-
-.. code-block:: shell
-
-    > python3 -m venv /path/to/anselm
-    > cd /path/to/anselm
-    > source bin/activate
-    > 
-    > ./anselm.sh & ./srv.sh
-
 requirements
 ============
 
@@ -18,4 +8,36 @@ requirements
 * redis
 * PyQt5
 * flask
+
+redis
+=====
+
+install on opensuse with (su):
+
+.. code-block:: shell
+
+    > zypper ref
+    > zypper in redis
+    > cp -a /etc/redis/default.conf.example /etc/redis/default.conf
+    > chown root:redis  /etc/redis/default.conf
+    > chmod u=rw,g=r,o= /etc/redis/default.conf
+    > 
+    > install -d -o redis -g redis -m 0750 /var/lib/redis/default/
+    > 
+    > systemctl start redis@default
+    > systemctl enable redis@default
+
+
+install and run
+===============
+
+.. code-block:: shell
+
+    > python3 -m venv /path/to/anselm
+    > cd /path/to/anselm
+    > source bin/activate
+    > pip install -e .
+    > 
+    > ./anselm.sh & ./srv.sh
+
 
