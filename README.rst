@@ -9,7 +9,7 @@ start the system with:
     > cd /path/to/anselm
     > source bin/activate
     > 
-    > ./anselm.sh & ./lanfrank.sh
+    > ./anselm.sh & ./srv.sh
 
 requirements
 ============

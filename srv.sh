@@ -1,5 +1,5 @@
 #!/bin/sh
-export FLASK_APP=lanfrank.py
+export FLASK_APP=srv.py
 export FLASK_DEBUG=1
 export FLASK_ENV=development
 
