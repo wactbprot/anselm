@@ -37,9 +37,11 @@ class Anselm(System):
   
     mult_line_height = 4
     current_grid_line = 1
-    add_device_btn_col = 1
-    std_col = 2
-    year_col = 3
+
+    add_device_btn_col = 3
+    std_col = 1
+    year_col = 2
+
     cal_id_col = 2
     fullscale_col = 3
     dut_branch_col = 4
@@ -74,13 +76,13 @@ class Anselm(System):
 
         b = QPushButton("add device line", self.win)
         b.setStyleSheet("background-color: yellow")
-        b.setFixedSize(self.long_line, self.line_heigth)
         b.clicked.connect(self.add_device_line)
 
         return b
 
     def make_std_combo(self):
         c = self.make_combo(self.std_select, first_item="select primary standard", last_item=False)
+        c.setFixedSize(self.long_line, self.line_heigth)
         c.currentIndexChanged.connect(lambda: self.std_selected(c))
 
         return c
