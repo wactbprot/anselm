@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, 
 from PyQt5.QtCore import QThread, pyqtSignal , Qt
 import sys
 
-
 class Observe(QThread, System):
     signal = pyqtSignal('PyQt_PyObject')
     def __init__(self):
@@ -16,10 +15,8 @@ class Observe(QThread, System):
         System.__init__(self)
 
     def run(self):
-        # git clone done, now inform the main thread with the output
-
         self.p.subscribe("io")
-        print('Listening redis...')
+        self.log.info('start listening redis ')
         for item in self.p.listen():
             self.log.debug("received item: {}".format(item))
             if item['type'] == 'message':
@@ -38,9 +35,9 @@ class Anselm(System):
     mult_line_height = 4
     current_grid_line = 1
 
-    add_device_btn_col = 3
     std_col = 1
     year_col = 2
+    add_device_btn_col = 3
 
     cal_id_col = 2
     fullscale_col = 3
