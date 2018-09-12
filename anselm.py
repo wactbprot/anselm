@@ -49,7 +49,7 @@ class Anselm(System):
     run_btn_col = 8
     result_col= 1
     line_heigth = 28
-    long_line = 350
+    long_line = 200
 
     def __init__(self):
         super().__init__()
@@ -142,12 +142,6 @@ class Anselm(System):
         self.win.setWindowTitle('Anselm')
         self.win.show()
 
-    def make_run_bttn(self, line):
-        b = QPushButton("run", self.win)
-        b.clicked.connect(lambda: self.run_task(line))
-
-        return b
-
     def make_result_label(self, line):
         widget_item = self.grid.itemAtPosition (line, self.result_col)
         if widget_item:
@@ -169,7 +163,7 @@ class Anselm(System):
 
     def make_run_kind_combo(self, line):
 
-        c = self.make_combo(self.run_kinds, first_item=False, last_item=False)
+        c = self.make_combo(self.run_kinds, first_item="run:", last_item=False)
         c.currentIndexChanged.connect(lambda: self.run_kind_selected(c, line))
 
         return c
@@ -218,6 +212,7 @@ class Anselm(System):
     def run_kind_selected(self, combo, line):
         run_kind = combo.currentText()
         self.aset('run_kind', line, run_kind)
+        self.run_task(line)
 
     def task_selected(self, combo, line):
         task_name = combo.currentText()
@@ -227,7 +222,6 @@ class Anselm(System):
         self.aset('task', line, task)
 
         # add elements for next actions
-        self.add_widget_to_grid(self.make_run_bttn(line=line), line, self.run_btn_col)
         self.add_widget_to_grid(self.make_run_kind_combo(line=line), line, self.run_kind_col)
 
         self.log.debug("task: {}".format(task))
