@@ -13,6 +13,8 @@ class System:
     log_level = "DEBUG"
     first_item ="select"   
     last_item = "remove"
+    keysep = "@"
+
     def __init__(self):
         """
         Gets the configuration out of the file: ``config.json``.
@@ -47,13 +49,16 @@ class System:
         self.p = self.r.pubsub()
         self.log.info("pubsub ok")
 
+    def gen_key(self, key_prefix, line):
+        return '{}{}{}'.format(key_prefix, self.keysep, line) 
+
     def aset(self, key_prefix, line, value, expire=False):
-        k = '{}@{}'.format(key_prefix, line)
-        
+
+        k = self.gen_key(key_prefix, line)
+
         if isinstance(value, dict) or isinstance(value, list):
             v = json.dumps(value)
-
-        if isinstance(value, str):
+        else:
             v = value
 
         if v == self.first_item or v == self.last_item:
@@ -65,7 +70,7 @@ class System:
             self.r.pexpire(k, self.expire_time)
 
     def aget(self, key_prefix, line):
-        k = '{}@{}'.format(key_prefix, line) 
+        k = self.gen_key(key_prefix, line)
         
         return self.r.get(k)
     
@@ -73,6 +78,11 @@ class System:
         v = self.aget(key_prefix, line)
         
         return json.loads(v)
+    
+    def fget(self, key_prefix, line):
+        v = self.aget(key_prefix, line)
+        
+        return float(v)
 
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')
