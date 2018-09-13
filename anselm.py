@@ -25,18 +25,18 @@ class Observe(QThread, System):
 
 class Anselm(System):
     fullscale_list = [
-    {"Unit":"mbar", "Display":"SRG"     , "Value":0.02},  
-    {"Unit":"mbar", "Display":"0.1mbar" , "Value":0.1},  
-    {"Unit":"mbar", "Display":"0.25mbar", "Value":0.25}, 
-    {"Unit":"mbar", "Display":"1mbar"   , "Value":1.0}, 
-    {"Unit":"mbar", "Display":"10mbar"  , "Value":10.0},  
-    {"Unit":"mbar", "Display":"100mbar" , "Value":100.0},  
-    {"Unit":"mbar", "Display":"1000mbar", "Value":1000.0},  
-    {"Unit":"mbar", "Display":"0.1Torr" , "Value":0.133}, 
-    {"Unit":"mbar", "Display":"1Torr"   , "Value":1.33},  
-    {"Unit":"mbar", "Display":"10Torr"  , "Value":13.3},  
-    {"Unit":"mbar", "Display":"100Torr" , "Value":133.0},  
-    {"Unit":"mbar", "Display":"1000Torr", "Value":1330.0}, 
+    {"Unit":"Pa", "Display":"SRG"     , "Value":2.0},  
+    {"Unit":"Pa", "Display":"0.1mbar" , "Value":10.0},  
+    {"Unit":"Pa", "Display":"0.25mbar", "Value":25.0}, 
+    {"Unit":"Pa", "Display":"1mbar"   , "Value":100}, 
+    {"Unit":"Pa", "Display":"10mbar"  , "Value":1000.0},  
+    {"Unit":"Pa", "Display":"100mbar" , "Value":10000.},  
+    {"Unit":"Pa", "Display":"1000mbar", "Value":100000.0},  
+    {"Unit":"Pa", "Display":"0.1Torr" , "Value":13.3}, 
+    {"Unit":"Pa", "Display":"1Torr"   , "Value":133.0},  
+    {"Unit":"Pa", "Display":"10Torr"  , "Value":1330.0},  
+    {"Unit":"Pa", "Display":"100Torr" , "Value":13300.0},  
+    {"Unit":"Pa", "Display":"1000Torr", "Value":133000.0}, 
     ]
     std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
     year_select = ["2019", "2018", "2017"]

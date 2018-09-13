@@ -86,14 +86,14 @@ class DB(System):
             self.log.error("no doc with id {}".format(doc_id))
             return []
 
-    def get_auxobj(self, id):
+    def get_doc(self, id):
         doc = self.db[id]
         if doc:
             return doc
         else:
             self.log.error("document with id: {} does not exist".format(id))
             return None
-        
+
     def replace_defaults(self, task, defaults):
         strtask = json.dumps(task)
         if isinstance(defaults, dict):
