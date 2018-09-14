@@ -62,6 +62,7 @@ class Anselm(System):
     start_defaults_col = 9
     line_heigth = 28
     long_line = 200
+    med_line = 80
 
     def __init__(self):
         super().__init__()
@@ -85,6 +86,7 @@ class Anselm(System):
     def make_label_edit_pair(self, label_val, edit_val, line):
         label_widget = QLabel(str(label_val), self.win)
         edit_widget = QLineEdit(str(edit_val),  self.win)
+        edit_widget.setFixedSize(self.med_line, self.line_heigth)
         edit_widget.textChanged[str].connect(lambda: self.default_change(edit_widget, str(label_val), line))
         
         return label_widget, edit_widget
