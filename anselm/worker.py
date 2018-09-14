@@ -9,9 +9,9 @@ class Worker(System):
     work_on_line = None
     def __init__(self):
         super().__init__()
-        relay_dict = self.config['relay']
+        relay_dict = self.config.get('relay')
         self.relay_dict = relay_dict
-        self.relay_url = "http://{}:{}".format(relay_dict['host'], relay_dict['port'])
+        self.relay_url = "http://{}:{}".format(relay_dict.get('host'), relay_dict.get('port'))
         self.headers = {'content-type': 'application/json'}
         
 

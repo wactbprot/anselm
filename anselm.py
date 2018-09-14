@@ -151,6 +151,7 @@ class Anselm(System):
 
     def add_device_line(self):
         self.current_grid_line +=1
+        
         line = self.current_grid_line
         self.add_widget_to_grid(self.make_cal_id_combo(line = line), line, self.cal_id_col)
         self.add_widget_to_grid(self.make_auxobj_combo(line = line), line, self.auxobj_col)
@@ -266,6 +267,7 @@ class Anselm(System):
         self.log.info("task with name {} selected at line {}".format(task_name, line))
 
     def auxobj_selected(self, combo, line):
+
         doc_id = combo.currentText()
         self.aset('doc_id', line, doc_id)
         self.log.debug("select {} at line {}".format(doc_id, line))
