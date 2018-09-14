@@ -4,7 +4,7 @@ import json
 from anselm.system import System # pylint: disable=E0611
 from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
-from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QPlainTextEdit
+from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QPlainTextEdit, QLabel, QLineEdit
 from PyQt5.QtCore import QThread, pyqtSignal , Qt
 import sys
 
@@ -58,6 +58,8 @@ class Anselm(System):
     run_kind_col = 7
     run_btn_col = 8
     result_col= 1
+   
+    start_defaults_col = 9
     line_heigth = 28
     long_line = 200
 
@@ -79,6 +81,13 @@ class Anselm(System):
 
         self.add_widget_to_grid(self.make_std_combo(),self.current_grid_line, self.std_col)
         self.draw_grid()
+
+    def make_label_edit_pair(self, label_val, edit_val, line):
+        label_widget = QLabel(str(label_val), self.win)
+        edit_widget = QLineEdit(str(edit_val),  self.win)
+        edit_widget.textChanged[str].connect(lambda: self.default_change(edit_widget, str(label_val), line))
+        
+        return label_widget, edit_widget
 
     def make_add_device_button(self):
 
@@ -170,7 +179,7 @@ class Anselm(System):
         l.setPlainText("{}".format(txt))
 
         return l
-
+    
     def make_run_kind_combo(self, line):
 
         c = self.make_combo(self.run_kinds, first_item="run:", last_item=False)
@@ -230,9 +239,23 @@ class Anselm(System):
     def task_selected(self, combo, line):
         task_name = combo.currentText()
         doc_id = self.aget('doc_id', line)
+        task, defaults, task_db = self.db.get_task_and_defaults(doc_id, task_name)
+        
+        self.log.debug(defaults)
+
+        current_defaults_col = self.start_defaults_col
+        for label_val, edit_val in defaults.items():
+            self.log.debug(label_val)
+            self.log.debug(edit_val)
+            label_widget, edit_widget = self.make_label_edit_pair(label_val, edit_val, line)
+            self.add_widget_to_grid(label_widget, line, current_defaults_col)
+            self.add_widget_to_grid(edit_widget, line, current_defaults_col +1)
+            current_defaults_col = current_defaults_col +2
+        
         self.aset('task_name', line, task_name)
-        task = self.db.get_task(doc_id, task_name)
-        self.aset('task', line, task)
+        self.aset('task', line, task) 
+        self.aset('task_db', line, task_db) 
+        self.aset('defaults', line, defaults)
 
         # add elements for next actions
         self.add_widget_to_grid(self.make_run_kind_combo(line=line), line, self.run_kind_col)
@@ -246,8 +269,7 @@ class Anselm(System):
         self.log.debug("select {} at line {}".format(doc_id, line))
         task_combo = self.make_task_combo(doc_id = doc_id, line = line)
         self.add_widget_to_grid(widget=task_combo, line=line, col=self.task_col)
-        #self.draw_grid()
-
+        
     def cal_id_selected(self, combo, line):
         cal_id = combo.currentText()
         self.aset('calid', line, cal_id)
@@ -256,7 +278,7 @@ class Anselm(System):
     def fullscale_selected(self, combo, line):
         fs = combo.currentText()
         for d in self.fullscale_list:
-            if d['Display'] == fs:
+            if d.get('Display') == fs:
                 self.aset('fullscale_display', line, d['Display'])
                 self.aset('fullscale_value', line, d['Value'])
                 self.aset('fullscale_unit', line, d['Unit'])
@@ -280,6 +302,17 @@ class Anselm(System):
         self.aset('year', 0, year)
         self.add_widget_to_grid(self.make_add_device_button(), self.current_grid_line, self.add_device_btn_col) 
         self.log.info("select year {}".format( year ))
+    
+    def default_change(self, edit_widget, label_val, line):
+        self.log.debug(label_val)
+        defaults = self.dget('defaults', line)
+        task_db = self.dget('task_db', line)
+
+        if label_val in defaults:
+            defaults[label_val] = str(edit_widget.text())
+            self.aset('defaults', line, defaults)
+            task = self.db.replace_defaults(task=task_db, defaults=defaults)
+            self.aset('task', line, task)
 
     def closeEvent(self, event):
         self.log.info("flush redis database")
