@@ -77,12 +77,18 @@ class System:
     def dget(self, key_prefix, line):
         v = self.aget(key_prefix, line)
         
-        return json.loads(v)
-    
+        if v:
+            return json.loads(v)
+        else:
+            return None
+
     def fget(self, key_prefix, line):
         v = self.aget(key_prefix, line)
         
-        return float(v)
-
+        if v:
+            return float(v)
+        else:
+            return None
+            
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')

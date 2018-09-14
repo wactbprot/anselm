@@ -23,7 +23,7 @@ def calids():
 
     s.log.info("request cal ids")
     
-    return jsonify({"calids":calids })
+    return jsonify({"ids":calids })
 
 @app.route('/dut_max', methods=['GET'])
 def dut_max():
