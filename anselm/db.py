@@ -33,17 +33,32 @@ class DB(System):
 
        
     def get_auxobj_ids(self):         
-        view = self.db_dict.get('view').get('auxobj')
-        
-        return [doc.get('id') for doc in self.db.view(view)]
+        view_con = self.db_dict.get('view').get('auxobj')
+        try:
+            view = self.db.view(view_con)
+            res = [doc.get('id') for doc in view] 
+        except Exception as inst:
+            self.log.error("aux view does not work: {}".format(inst))
+            res = ["dummy aux"]
+            self.log.warn("return dummy value")
+
+        return res
     
     def get_cal_ids(self):         
-        view = self.db_dict.get('view').get('calids')
+        view_con = self.db_dict.get('view').get('calids')
         year = self.aget('year',0)
         standard = self.aget('standard',0)
-        print(year)
-        return [doc.get('id') for doc in self.db.view(view, key ="{}_{}".format(year, standard))]
-    
+        query_key = "{}_{}".format(year, standard)
+        
+        try:
+            view = self.db.view(view_con, key =query_key)
+            res = [doc.get('id') for doc in view]
+        except Exception as inst:
+            self.log.error("doc view does not work: {}".format(inst))
+            res = ["dummy doc"]
+            self.log.warn("return dummy value")
+
+        return res
 
     def get_red_doc(self, doc_id):
         doc = self.db[doc_id]
