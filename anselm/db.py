@@ -32,14 +32,14 @@ class DB(System):
         self.db.save(doc)
 
        
-    def get_auxobj_ids(self):         
-        view_con = self.db_dict.get('view').get('auxobj')
+    def get_custobj_ids(self):         
+        view_con = self.db_dict.get('view').get('custobj')
         try:
             view = self.db.view(view_con)
             res = [doc.get('id') for doc in view] 
         except Exception as inst:
-            self.log.error("aux view does not work: {}".format(inst))
-            res = ["dummy aux"]
+            self.log.error("cust view does not work: {}".format(inst))
+            res = ["dummy cust"]
             self.log.warn("return dummy value")
 
         return res
@@ -64,8 +64,8 @@ class DB(System):
         doc = self.db[doc_id]
         red_doc = None
         if doc:
-            if 'AuxObject' in doc:
-                red_doc = doc.get('AuxObject')
+            if 'CustomerObject' in doc:
+                red_doc = doc.get('CustomerObject')
             
             if 'CalibrationObject' in doc:
                 red_doc = doc.get('CalibrationObject')

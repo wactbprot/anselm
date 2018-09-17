@@ -53,7 +53,7 @@ class Anselm(System):
     cal_id_col = 2
     fullscale_col = 3
     dut_branch_col = 4
-    auxobj_col = 5
+    custobj_col = 5
     task_col = 6
     run_kind_col = 7
     run_btn_col = 8
@@ -154,7 +154,7 @@ class Anselm(System):
         
         line = self.current_grid_line
         self.add_widget_to_grid(self.make_cal_id_combo(line = line), line, self.cal_id_col)
-        self.add_widget_to_grid(self.make_auxobj_combo(line = line), line, self.auxobj_col)
+        self.add_widget_to_grid(self.make_custobj_combo(line = line), line, self.custobj_col)
         self.add_widget_to_grid(self.make_fullscale_combo(line = line), line, self.fullscale_col)
         self.add_widget_to_grid(self.make_dut_branch_combo(line = line), line, self.dut_branch_col)
         self.add_widget_to_grid(self.make_result_label(line = line), line, self.result_col)
@@ -215,14 +215,14 @@ class Anselm(System):
 
         return c
 
-    def make_auxobj_combo(self, line):
+    def make_custobj_combo(self, line):
 
-        aux_obj_ids = self.db.get_auxobj_ids()
+        cust_obj_ids = self.db.get_custobj_ids()
 
-        self.log.debug("found following auxobj ids {}".format(aux_obj_ids))
+        self.log.debug("found following custobj ids {}".format(cust_obj_ids))
 
-        c = self.make_combo(aux_obj_ids, first_item="select read out device", last_item=False)
-        c.currentIndexChanged.connect(lambda: self.auxobj_selected(c, line))
+        c = self.make_combo(cust_obj_ids, first_item="select read out device", last_item=False)
+        c.currentIndexChanged.connect(lambda: self.custobj_selected(c, line))
 
         return c
 
@@ -266,7 +266,7 @@ class Anselm(System):
         self.log.debug("task: {}".format(task))
         self.log.info("task with name {} selected at line {}".format(task_name, line))
 
-    def auxobj_selected(self, combo, line):
+    def custobj_selected(self, combo, line):
 
         doc_id = combo.currentText()
         self.aset('doc_id', line, doc_id)

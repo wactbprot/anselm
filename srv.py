@@ -132,4 +132,8 @@ def target_pressure():
     if not 'error' in res:
         return jsonify({'ToExchange':res})
     else:
-        return jsonify(res)        
+        return jsonify(res)
+
+@app.route('/offset_all', methods=['POST'])
+def offset_all():
+    s.log.info("request to target pressures")
