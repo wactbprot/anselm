@@ -273,7 +273,10 @@ class Anselm(System):
             else:
                 res = False
                 break
-           
+
+            self.log.info("offset_all sequence is: []".format( offset_all_sequence))
+            self.aset("offset_all_sequence", line, offset_all_sequence)
+            
         return res
 
     def run_selected(self, combo, line):
