@@ -232,18 +232,56 @@ class Anselm(System):
         return c
 
     def make_task_combo(self, doc_id, line):
+
         task_names = self.db.get_task_names(doc_id = doc_id)
         self.log.debug("found following tasknames {}".format(task_names))
-        c = self.make_combo(task_names, first_item="select task", last_item=False)
+        ok = self.validate_task_names(task_names, line)
+        
+        if ok:
+            first_item = "tasks ok"
+        else:
+            first_item = "task name problem"
+
+        c = self.make_combo(task_names, first_item=first_item, last_item=False)
         c.currentIndexChanged.connect(lambda: self.task_selected(c, line))
 
         return c
+
+    def validate_task_names(self, task_names, line):
+        offset_all_sequence = []
+        res = True
+        for task_name in task_names:
+            if task_name.startswith('auto_init_'):
+                self.aset('init_task_names', line, task_name)
+                sufix = task_name.replace('auto_init_', '')
+                offset_all_sequence.append(task_name)
+                related_offset_task = 'auto_offset_{}'.format(sufix)
+                if  related_offset_task in task_names:
+                    offset_all_sequence.append(related_offset_task)
+                else:
+                    res = False
+                    break
+           
+            if 'offset' in task_names:
+                self.aset('offset_task_name', line, task_name)
+            else:
+                res = False
+                break
+           
+            if 'ind' in task_names:
+                self.aset('ind_task_name', line, task_name)
+            else:
+                res = False
+                break
+           
+        return res
 
     def run_selected(self, combo, line):
         
         self.run_task(line)
 
     def task_selected(self, combo, line):
+
         task_name = combo.currentText()
         doc_id = self.aget('doc_id', line)
 
