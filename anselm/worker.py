@@ -38,27 +38,20 @@ class Worker(System):
             self.log.error("member var: work_on_line not set")
 
     def relay_worker(self, task, line):
-        repeat = True
-        while repeat:
-            req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
-            res = req.json()
+       
+        req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
+        res = req.json()
 
-            if 'Result' in res:
-                self.aset('result', line,  res['Result'], expire=False)
+        if 'Result' in res:
+            self.aset('result', line,  res['Result'], expire=False)
 
-            if 'ToExchange' in res:
-                self.aset('exchange', line, res['ToExchange'], expire=False)
+        if 'ToExchange' in res:
+            self.aset('exchange', line, res['ToExchange'], expire=False)
 
-            self.log.debug("values written")
-            self.r.publish('io', line)
+        self.log.debug("values written")
+        self.r.publish('io', line)
 
-            run_kind = self.aget('run_kind', line)
-            self.log.debug("run_kind is {}".format(run_kind))
-            if run_kind == 'loop':
-                repeat = True
-            else:
-                repeat = False
-                break
+       
 
     def wait_worker(self, task, line):
         time.sleep(5)

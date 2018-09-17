@@ -55,11 +55,10 @@ class Anselm(System):
     dut_branch_col = 4
     custobj_col = 5
     task_col = 6
-    run_kind_col = 7
-    run_btn_col = 8
+    run_btn_col = 7
     result_col= 1
    
-    start_defaults_col = 9
+    start_defaults_col = 8
     line_heigth = 28
     long_line = 200
     med_line = 80
@@ -84,6 +83,7 @@ class Anselm(System):
         self.draw_grid()
 
     def make_label_edit_pair(self, label_val, edit_val, line):
+
         label_widget = QLabel(str(label_val), self.win)
         edit_widget = QLineEdit(str(edit_val),  self.win)
         edit_widget.setFixedSize(self.med_line, self.line_heigth)
@@ -173,22 +173,27 @@ class Anselm(System):
             l.setFixedSize(self.long_line, self.line_heigth*self.mult_line_height)
         l.setStyleSheet("background-color: lightyellow")
         result = self.aget('result', line)
+        exchange = self.aget('exchange', line)
         if result:
             txt = str(result)
-            txt = txt.replace(",", ",\n")
+        elif exchange:
+            txt = str(exchange)
         else:
             txt = ""
+        
+        txt = txt.replace(",", ",\n")
 
         l.setPlainText("{}".format(txt))
 
         return l
     
-    def make_run_kind_combo(self, line):
+    def make_run_button(self, line):
 
-        c = self.make_combo(self.run_kinds, first_item="run:", last_item=False)
-        c.currentIndexChanged.connect(lambda: self.run_kind_selected(c, line))
+        b = QPushButton("go", self.win)
+        b.setStyleSheet("background-color: lightgreen")
+        b.clicked.connect(lambda: self.run_selected(b, line))
 
-        return c
+        return b
 
     def make_dut_branch_combo(self, line):
 
@@ -234,34 +239,30 @@ class Anselm(System):
 
         return c
 
-    def run_kind_selected(self, combo, line):
-        run_kind = combo.currentText()
-        self.aset('run_kind', line, run_kind)
+    def run_selected(self, combo, line):
+        
         self.run_task(line)
 
     def task_selected(self, combo, line):
         task_name = combo.currentText()
         doc_id = self.aget('doc_id', line)
-        task, defaults, task_db = self.db.get_task_and_defaults(doc_id, task_name)
-        
-        self.log.debug(defaults)
 
-        current_defaults_col = self.start_defaults_col
-        for label_val, edit_val in defaults.items():
-            self.log.debug(label_val)
-            self.log.debug(edit_val)
-            label_widget, edit_widget = self.make_label_edit_pair(label_val, edit_val, line)
-            self.add_widget_to_grid(label_widget, line, current_defaults_col)
-            self.add_widget_to_grid(edit_widget, line, current_defaults_col +1)
-            current_defaults_col = current_defaults_col +2
+        task_db = self.db.get_task(doc_id, task_name)
+        defaults = self.dget('defaults', line)
+        
+        if defaults:
+            task = self.db.replace_defaults(task_db, defaults)
+            self.log.debug(defaults)
+        else:
+            self.log.warn("no defaults")
         
         self.aset('task_name', line, task_name)
         self.aset('task', line, task) 
         self.aset('task_db', line, task_db) 
-        self.aset('defaults', line, defaults)
+       
 
         # add elements for next actions
-        self.add_widget_to_grid(self.make_run_kind_combo(line=line), line, self.run_kind_col)
+        self.add_widget_to_grid(self.make_run_button(line=line), line, self.run_btn_col)
 
         self.log.debug("task: {}".format(task))
         self.log.info("task with name {} selected at line {}".format(task_name, line))
@@ -273,6 +274,17 @@ class Anselm(System):
         self.log.debug("select {} at line {}".format(doc_id, line))
         task_combo = self.make_task_combo(doc_id = doc_id, line = line)
         self.add_widget_to_grid(widget=task_combo, line=line, col=self.task_col)
+        defaults = self.db.get_defaults(doc_id)
+        self.aset('defaults', line, defaults)
+
+        current_defaults_col = self.start_defaults_col
+        for label_val, edit_val in defaults.items():
+            self.log.debug(label_val)
+            self.log.debug(edit_val)
+            label_widget, edit_widget = self.make_label_edit_pair(label_val, edit_val, line)
+            self.add_widget_to_grid(label_widget, line, current_defaults_col)
+            self.add_widget_to_grid(edit_widget, line, current_defaults_col +1)
+            current_defaults_col = current_defaults_col +2
         
     def cal_id_selected(self, combo, line):
         cal_id = combo.currentText()

@@ -83,8 +83,17 @@ class DB(System):
             return [task.get('TaskName') for task in doc.get('Task')]
         else:
             return []
-        
-    def get_task_and_defaults(self, doc_id, task_name):         
+
+    def get_defaults(self, doc_id):         
+        doc = self.get_red_doc(doc_id)
+        if 'Defaults' in doc:
+            defaults = doc.get('Defaults')       
+        else:
+            defaults = {}
+
+        return defaults
+
+    def get_task(self, doc_id, task_name):         
         doc = self.get_red_doc(doc_id)
         if doc and 'Task' in doc:
             tasks = doc.get('Task')
@@ -92,13 +101,7 @@ class DB(System):
                 if task.get('TaskName') == task_name:
                     break
 
-            if 'Defaults' in doc:
-                defaults = doc.get('Defaults')       
-                task_repl = self.replace_defaults(task=task, defaults=defaults)
-            else:
-                defaults = {}
-
-            return task_repl, defaults, task
+            return task
         else:
             self.log.error("no doc with id {}".format(doc_id))
             return []
