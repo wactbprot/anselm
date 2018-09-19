@@ -1,6 +1,9 @@
 from flask import Flask, jsonify, request
 from anselm.system import System
 from anselm.db import DB
+from anselm.worker import Worker
+from _thread import start_new_thread
+import time
 
 app = Flask(__name__)
 s = System()
@@ -12,6 +15,7 @@ def home():
                                 "/cal_ids",
                                 "/dut_max",
                                 "/target_pressures",
+                                "/offset_sequences"
                             ] })
 
 @app.route('/cal_ids')
@@ -134,6 +138,43 @@ def target_pressure():
     else:
         return jsonify(res)
 
-@app.route('/offset_all', methods=['POST'])
-def offset_all():
+@app.route('/offset_sequences', methods=['GET'])
+def offset_sequences():
     s.log.info("request to target pressures")
+    keys = s.r.keys('offset_all_sequence@*')
+    delay = 0.5 #s
+    work_count = 0
+    for key in keys:
+        _ , line = key.split(s.keysep)
+        time.sleep(delay)
+        sequence = s.dget('offset_all_sequence', line)
+        work_count = work_count + len(sequence) -1
+        start_new_thread( work_seqence, (sequence, line,))
+     
+    s.p.subscribe("srv")
+    s.log.info('start listening redis ')
+    for item in s.p.listen():
+        s.log.debug("received item: {}".format(item))
+        if item['type'] == 'message':
+            s.log.debug(item['data'])
+            work_count = work_count -1
+            s.log.info("remaining tasks: {}".format(work_count))
+
+            if work_count == 0:
+                break
+    
+    return jsonify({'ok':True, })
+
+
+def work_seqence(sequence, line):
+    worker = Worker()
+    delay = 0.2 #s
+    for task_name in sequence:
+        db.choose_task(task_name, line)
+        s.log.debug("choose {} in line {}, start working on".format(task_name, line))
+        task = s.dget("task", line)
+        worker_fn = worker.get_worker(task, line)
+        worker_fn(task, line)
+        time.sleep(delay)
+        s.r.publish('srv', line)
+        

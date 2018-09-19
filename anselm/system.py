@@ -75,6 +75,8 @@ class System:
         return self.r.get(k)
     
     def dget(self, key_prefix, line):
+        """Get a dict from mem store by key_prefix and line
+        """
         v = self.aget(key_prefix, line)
         
         if v:
@@ -82,6 +84,7 @@ class System:
         else:
             return None
 
+        
     def fget(self, key_prefix, line):
         v = self.aget(key_prefix, line)
         
@@ -92,3 +95,5 @@ class System:
             
     def now(self):
         return datetime.datetime.now().isoformat().replace('T', ' ')
+
+    

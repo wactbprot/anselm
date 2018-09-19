@@ -6,14 +6,24 @@ from _thread import start_new_thread
 
 
 class Worker(System):
-    work_on_line = None
     def __init__(self):
         super().__init__()
+        self.work_on_line = None
         relay_dict = self.config.get('relay')
         self.relay_dict = relay_dict
         self.relay_url = "http://{}:{}".format(relay_dict.get('host'), relay_dict.get('port'))
         self.headers = {'content-type': 'application/json'}
+
+    def get_worker(self, task, line):
+        worker = None
+        acc = task['Action']
+
+        if acc == "TCP" or acc == "VXI11" or  acc == "MODBUS":
+            worker =  self.relay_worker       
+        if acc == "wait":
+            worker =  self.wait_worker                   
         
+        return worker
 
     def run(self):
         """The member workonline is set ba anselm
@@ -23,16 +33,12 @@ class Worker(System):
             line = self.work_on_line
             task = self.dget('task', line)
 
-            acc = task['Action']
-
-            if acc == "TCP" or acc == "VXI11" or  acc == "MODBUS":
-                worker =  self.relay_worker   
+            worker = self.get_worker(task, line)
+            if worker:
+                start_new_thread( worker, (task, line))
+            else:
+                self.log.error("missing worker function")
                 
-            if acc == "wait":
-                worker =  self.wait_worker                   
-
-        
-            start_new_thread( worker, (task, line))
             self.work_on_line = None
         else:
             self.log.error("member var: work_on_line not set")

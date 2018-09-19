@@ -133,3 +133,28 @@ class DB(System):
             self.log.error("replacing defaults fails for")
 
         return task
+    
+    def choose_task(self, task_name, line):
+
+        doc_id = self.aget('doc_id', line)
+        if doc_id:
+            task_db = self.get_task(doc_id, task_name)
+            
+            # dont get defaults from db
+            # they maybe changed for current line
+
+            defaults = self.dget('defaults', line)
+        
+            if defaults:
+                task = self.replace_defaults(task_db, defaults)
+                self.log.debug("defaults: {}".format(defaults))
+                self.log.debug("task: {}".format(task))
+
+            else:
+                self.log.warn("no defaults")
+
+            self.aset('task_name', line, task_name)
+            self.aset('task', line, task) 
+            self.aset('task_db', line, task_db) 
+        else:
+            self.log.error("line {} contains no doc_id")

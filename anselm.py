@@ -283,29 +283,16 @@ class Anselm(System):
         
         self.run_task(line)
 
+    
     def task_selected(self, combo, line):
 
         task_name = combo.currentText()
-        doc_id = self.aget('doc_id', line)
-
-        task_db = self.db.get_task(doc_id, task_name)
-        defaults = self.dget('defaults', line)
         
-        if defaults:
-            task = self.db.replace_defaults(task_db, defaults)
-            self.log.debug(defaults)
-        else:
-            self.log.warn("no defaults")
-        
-        self.aset('task_name', line, task_name)
-        self.aset('task', line, task) 
-        self.aset('task_db', line, task_db) 
-       
+        self.db.choose_task(task_name, line)
 
         # add elements for next actions
         self.add_widget_to_grid(self.make_run_button(line=line), line, self.run_btn_col)
 
-        self.log.debug("task: {}".format(task))
         self.log.info("task with name {} selected at line {}".format(task_name, line))
 
     def custobj_selected(self, combo, line):
