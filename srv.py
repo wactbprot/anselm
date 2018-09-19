@@ -142,29 +142,37 @@ def target_pressure():
 def offset_sequences():
     s.log.info("request to target pressures")
     keys = s.r.keys('offset_all_sequence@*')
-    delay = 0.5 #s
-    work_count = 0
+    seq_array = []
     for key in keys:
         _ , line = key.split(s.keysep)
-        time.sleep(delay)
         sequence = s.dget('offset_all_sequence', line)
-        work_count = work_count + len(sequence) -1
+        s.log.debug(sequence)
+        for task_name in sequence:
+            s.log.debug(task_name)        
+            seq_array.append("{}-{}".format(task_name, line)) 
+
         start_new_thread( work_seqence, (sequence, line,))
-     
+    
+    res = wait_sequences_complete(seq_array)
+
+    return jsonify(res)
+
+def wait_sequences_complete(seq_array):
     s.p.subscribe("srv")
-    s.log.info('start listening redis ')
+    s.log.info('start listening redis on channel srv')
     for item in s.p.listen():
         s.log.debug("received item: {}".format(item))
         if item['type'] == 'message':
-            s.log.debug(item['data'])
-            work_count = work_count -1
-            s.log.info("remaining tasks: {}".format(work_count))
-
-            if work_count == 0:
+            task_element_completed = item.get('data')
+            seq_array.remove(task_element_completed)
+            if len(seq_array) == 0:
+                s.log.info("wait_sequences_complete function will return, all done!")
                 break
-    
-    return jsonify({'ok':True, })
+            else:
+                s.log.info("remaining tasks elements: {}".format(seq_array))
 
+
+    return {'ok':True}
 
 def work_seqence(sequence, line):
     worker = Worker()
@@ -174,7 +182,9 @@ def work_seqence(sequence, line):
         s.log.debug("choose {} in line {}, start working on".format(task_name, line))
         task = s.dget("task", line)
         worker_fn = worker.get_worker(task, line)
-        worker_fn(task, line)
         time.sleep(delay)
-        s.r.publish('srv', line)
+        worker_fn(task, line)
+        data =  "{}-{}".format(task_name, line)
+        s.log.debug("will publish to srv for data {}".format(data))
+        s.r.publish('srv', data)
         
