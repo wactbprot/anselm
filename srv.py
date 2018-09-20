@@ -161,16 +161,24 @@ def offset_sequences():
 
 @app.route('/offset', methods=['POST'])
 def offset():
+    res = {"ok":True}
     s.log.info("request to offset")
     req = request.get_json()
+    s.log.debug("receive request with body {}".format(req))
+    if "Target_pressure_value" in req and "Target_pressure_unit" in req:
+        pass
+    else:
+        msg = "missing request data (Target_pressure_value or Target_pressure_unit)"
+        s.log.error(msg)
+        res {"error" : msg}
     # find valid init by means of req.target_pressure
     # init
     # offset
     # save if save=True
 
-    start_new_thread( work_seqence, (sequence, line,))
+    #start_new_thread( work_seqence, (sequence, line,))
     
-    res = wait_sequences_complete(seq_array)
+    #res = wait_sequences_complete(seq_array)
 
     return jsonify(res)
 

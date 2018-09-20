@@ -77,12 +77,12 @@ class DB(System):
         else:
             return None
 
-    def get_task_names(self, doc_id):         
+    def get_tasks(self, doc_id):         
         doc = self.get_red_doc(doc_id)
         if doc and 'Task' in doc:
-            return [task.get('TaskName') for task in doc.get('Task')]
+            return doc.get('Task')
         else:
-            return []
+            return None
 
     def get_defaults(self, doc_id):         
         doc = self.get_red_doc(doc_id)

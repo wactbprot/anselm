@@ -233,50 +233,72 @@ class Anselm(System):
 
     def make_task_combo(self, doc_id, line):
 
-        task_names = self.db.get_task_names(doc_id = doc_id)
-        self.log.debug("found following tasknames {}".format(task_names))
-        ok = self.validate_task_names(task_names, line)
+        tasks = self.db.get_tasks(doc_id = doc_id)
+        self.log.debug("found {} tasks ".format(len(tasks)))
+        ok = self.validate_tasks(tasks, line)
         
         if ok:
             first_item = "tasks ok"
         else:
             first_item = "task name problem"
 
-        c = self.make_combo(task_names, first_item=first_item, last_item=False)
+        c = self.make_combo([task.get('TaskName') for task in tasks], first_item=first_item, last_item=False)
         c.currentIndexChanged.connect(lambda: self.task_selected(c, line))
 
         return c
 
-    def validate_task_names(self, task_names, line):
-        offset_all_sequence = []
-        res = True
-        for task_name in task_names:
-            if task_name.startswith('auto_init_'):
-                self.aset('init_task_names', line, task_name)
-                sufix = task_name.replace('auto_init_', '')
-                offset_all_sequence.append(task_name)
-                related_offset_task = 'auto_offset_{}'.format(sufix)
-                if  related_offset_task in task_names:
-                    offset_all_sequence.append(related_offset_task)
-                else:
-                    res = False
-                    break
-           
-            if 'offset' in task_names:
-                self.aset('offset_task_name', line, task_name)
-            else:
-                res = False
-                break
-           
-            if 'ind' in task_names:
-                self.aset('ind_task_name', line, task_name)
-            else:
-                res = False
-                break
+    def get_pressure_from_range_expr(range_expr, line):
+        value = None
+        unit = None
 
-            self.log.info("offset_all sequence is: []".format( offset_all_sequence))
-            self.aset("offset_all_sequence", line, offset_all_sequence)
-            
+        q = {
+            '@fullscale' :1,
+            '@fullscale/10' :0.1,
+            '@fullscale/100' :0.01,
+            '@fullscale/1000' :0.001,
+            '@fullscale/10000' :0.0001,
+            '@fullscale/100000' :0.00001
+        }
+
+        if str_expr in  q:
+            value = s.fget("fullscale_value", line)*q[range_expr]
+            unit = s.fget("fullscale_unit", line)
+
+        else:
+            msg = "unknown range expression"
+            s.log.error(msg)
+
+        return value, unit
+
+    def validate_tasks(self, tasks, line):
+        offset_all_sequence = []
+        auto_init_tasks = []
+        auto_offset_tasks = []
+
+        res = True
+        for task in tasks:
+            task_name = task.get('TaskName')
+            task_data = {'TaskName':task_name}
+            if 'From' in task:
+                task_data['From'] , task_data['FromUnit'] , = get_pressure_from_range_expr(task.get('From'), line)
+            if 'To' in task:
+                task_data['To'] , task_data['ToUnit'] , = get_pressure_from_range_expr(task.get('To'), line)
+                    
+            if task_name.startswith('auto_init_'):
+                auto_init_tasks.append(task_data)
+
+            if  task_name.startswith('auto_offset_'):        
+                auto_offset_tasks.append(task_name)
+           
+            if task_name == 'offset':
+                self.aset('offset_task_name', line, task_data)
+           
+            if task_name == 'ind':
+                self.aset('ind_task_name', line, task_data)
+        
+        ## go on with checks ...
+        self.aset("offset_all_sequence", line, offset_all_sequence)
+
         return res
 
     def run_selected(self, combo, line):
