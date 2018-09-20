@@ -87,16 +87,17 @@ def dut_max():
 @app.route('/target_pressures', methods=['GET'])
 def target_pressure():
     s.log.info("request to target pressures")
+    keys = s.r.keys('calid@*')
+    target_pressure_values = []
+    target_pressure_unit = "Pa"
     res = {
-            "Pressure_target": {
+            "Target_pressure": {
                          "Caption": "target pressure",
+                         "Unit": target_pressure_unit,
                          "Selected": "1",
                          "Select": []
             }
         }
-    keys = s.r.keys('calid@*')
-    target_pressure_values = []
-    target_pressure_unit = "Pa"
     for key in keys:
         calid = s.r.get(key)
         caldoc = db.get_doc(calid)
@@ -107,7 +108,7 @@ def target_pressure():
             if todo_pressure.get('Unit') == "mbar":
                 conv_factor = 100
 
-            if todo_pressure.get('Unit') == "Pa":
+            if todo_pressure.get('Unit') == target_pressure_unit:
                 conv_factor = 1
 
             for v in todo_pressure.get('Value'):
@@ -124,10 +125,11 @@ def target_pressure():
         for v in sorted(target_pressure_values):
             formated_val = '{:.1e}'.format(v) 
             if first:
-                res['Pressure_target']['Selected'] = formated_val
+                res['Target_pressure']['Selected'] = formated_val
+                res['Target_pressure']['Unit'] = target_pressure_unit
                 first = False
 
-            res['Pressure_target']['Select'].append({'value':formated_val , 'display': "{} Pa".format( formated_val) })
+            res['Target_pressure']['Select'].append({'value':formated_val , 'display': "{} Pa".format( formated_val) })
     else:
         msg = "no target values found"
         s.log.error(msg)
@@ -140,7 +142,7 @@ def target_pressure():
 
 @app.route('/offset_sequences', methods=['GET'])
 def offset_sequences():
-    s.log.info("request to target pressures")
+    s.log.info("request to offset sequence")
     keys = s.r.keys('offset_all_sequence@*')
     seq_array = []
     for key in keys:
@@ -152,6 +154,21 @@ def offset_sequences():
             seq_array.append("{}-{}".format(task_name, line)) 
 
         start_new_thread( work_seqence, (sequence, line,))
+    
+    res = wait_sequences_complete(seq_array)
+
+    return jsonify(res)
+
+@app.route('/offset', methods=['POST'])
+def offset():
+    s.log.info("request to offset")
+    req = request.get_json()
+    # find valid init by means of req.target_pressure
+    # init
+    # offset
+    # save if save=True
+
+    start_new_thread( work_seqence, (sequence, line,))
     
     res = wait_sequences_complete(seq_array)
 
