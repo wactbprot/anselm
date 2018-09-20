@@ -40,6 +40,17 @@ install and run
     > 
     > ./anselm.sh & ./srv.sh
 
+relayServer
+===========
+
+.. code-block:: shell
+  
+  curl -d '{"Action":"HTTP","Url":"http://localhost:50005/dut_max"}'  http://localhost:55555
+  curl -d '{"Action":"HTTP","Url":"http://localhost:50005/target_pressures"}' http://localhost:55555
+  curl -d '{"Action":"HTTP","Url":"http://localhost:50005/offset_sequences"}' http://localhost:55555
+
+
+
 
 CustomerObject example
 ======================
