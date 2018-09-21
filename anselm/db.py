@@ -114,6 +114,11 @@ class DB(System):
             self.log.error("document with id: {} does not exist".format(id))
             return None
 
+    def set_doc(self, doc):
+        self.log.info("try to save document")
+        res = self.db.save(doc)
+        self.log.info(res)
+        
     def replace_defaults(self, task, defaults):
         strtask = json.dumps(task)
         if isinstance(defaults, dict):
@@ -158,3 +163,27 @@ class DB(System):
             self.aset('task_db', line, task_db) 
         else:
             self.log.error("line {} contains no doc_id")
+
+    def save_results(self):
+        cal_keys = self.r.keys("cal_id@*")
+        for cal_key in cal_keys:
+            _, line = cal_key.split(self.keysep)
+            doc_path = self.aget("doc_path", line)
+            results = self.dget("result", line)
+            self.log.debug("try to save results: {}".format(results))
+            if doc_path and results:
+                doc_path_array = doc_path.split(".")
+                cal_id = self.aget("cal_id", line)
+                doc = self.get_doc(cal_id)
+                for result in results:
+                    self.log.debug("save components are cal_id {}, doc_path_array: {}, result: {}".format(cal_id, doc_path_array, result))
+                    self.doc_write_result(doc, doc_path_array, result)
+                self.set_doc(doc)
+                
+    
+    def doc_write_result(self, doc, doc_path_array, result):
+        for key in doc_path_array[:-1]:
+            doc = doc.setdefault(key, {})
+        if not doc_path_array[-1] in doc:
+            doc[doc_path_array[-1]] = []
+            doc[doc_path_array[-1]].append(result)

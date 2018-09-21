@@ -22,14 +22,14 @@ def home():
 
 @app.route('/cal_ids')
 def calids():
-    keys = s.r.keys('calid@*')
-    calids = []
+    keys = s.r.keys('cal_id@*')
+    cal_ids = []
     for key in keys:
-        calids.append(s.r.get(key))
+        cal_ids.append(s.r.get(key))
 
     s.log.info("request cal ids")
     
-    return jsonify({"ids":calids })
+    return jsonify({"ids":cal_ids })
 
 @app.route('/dut_max', methods=['GET'])
 def dut_max():
@@ -89,7 +89,7 @@ def dut_max():
 @app.route('/target_pressures', methods=['GET'])
 def target_pressure():
     s.log.info("request to target pressures")
-    keys = s.r.keys('calid@*')
+    keys = s.r.keys('cal_id@*')
     target_pressure_values = []
   
     res = {

@@ -48,6 +48,9 @@ class Worker(System):
         req = requests.post(self.relay_url, data=json.dumps(task), headers = self.headers)
         res = req.json()
 
+        if 'DocPath' in task:
+            self.aset('doc_path', line,  task['DocPath'], expire=False)
+
         if 'Result' in res:
             self.aset('result', line,  res['Result'], expire=False)
 

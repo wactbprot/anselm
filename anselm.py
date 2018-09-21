@@ -153,6 +153,9 @@ class Anselm(System):
 
     def end_task(self, line):
         self.add_widget_to_grid(self.make_result_label(line = line), line, self.result_col)
+        
+        if self.aget('save', 0) == "yes":
+            self.db.save_results()
 
         self.log.info("end task at line {}".format(line))
 
@@ -351,7 +354,7 @@ class Anselm(System):
         
     def cal_id_selected(self, combo, line):
         cal_id = combo.currentText()
-        self.aset('calid', line, cal_id)
+        self.aset('cal_id', line, cal_id)
         self.log.info("select calibration id {}".format( cal_id ))
 
     def fullscale_selected(self, combo, line):
