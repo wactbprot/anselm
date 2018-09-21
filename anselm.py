@@ -28,14 +28,14 @@ class Anselm(System):
     std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
     year_select = ["2019", "2018", "2017"]
     dut_branches = ["dut_a", "dut_b", "dut_c"]
-    run_kinds = ["single", "loop"]
-  
+    env_switch =["production" , "development"]
     mult_line_height = 4
     current_grid_line = 1
 
     std_col = 1
     year_col = 2
-    add_device_btn_col = 3
+    env_col = 3
+    add_device_btn_col = 4
 
     cal_id_col = 2
     fullscale_col = 3
@@ -103,6 +103,13 @@ class Anselm(System):
         c = self.make_combo(self.std_select, first_item="select primary standard", last_item=False)
         c.setFixedSize(self.long_line, self.line_heigth)
         c.currentIndexChanged.connect(lambda: self.std_selected(c))
+
+        return c
+
+    def make_env_combo(self):
+        c = self.make_combo(self.env_switch, first_item="select env", last_item=False)
+        c.setFixedSize(self.long_line, self.line_heigth)
+        c.currentIndexChanged.connect(lambda: self.env_selected(c))
 
         return c
 
@@ -368,11 +375,23 @@ class Anselm(System):
         self.aset('standard', 0,  standard )
         self.add_widget_to_grid(self.make_year_combo() ,self.current_grid_line, self.year_col)
         self.log.info("select standard {}".format( standard))
+    
+    def env_selected(self, combo):
+        env = combo.currentText()
+        self.aset('enviroment', 0,  env )
+        self.add_widget_to_grid(self.make_add_device_button(), self.current_grid_line, self.add_device_btn_col) 
+        if env == "production":
+            self.aset('save', 0,  "yes" )
+            # ... chatbot to all on
+        if env == "development":
+            self.aset('save', 0,  "no" )
+
+        self.log.info("select enviroment {}".format(env))
 
     def year_selected(self, combo):
         year = combo.currentText()
         self.aset('year', 0, year)
-        self.add_widget_to_grid(self.make_add_device_button(), self.current_grid_line, self.add_device_btn_col) 
+        self.add_widget_to_grid(self.make_env_combo(),  self.current_grid_line, self.env_col)
         self.log.info("select year {}".format( year ))
     
     def default_change(self, edit_widget, label_val, line):
