@@ -16,6 +16,8 @@ def home():
                                 "/dut_max",
                                 "/target_pressures",
                                 "/offset_sequences"
+                                "/offset",
+                                "/ind"
                             ] })
 
 @app.route('/cal_ids')
@@ -160,7 +162,7 @@ def offset_sequences():
 @app.route('/offset', methods=['POST'])
 def offset():
     res = {"ok":True}
-    s.log.info("request to offset")
+    s.log.info("request to endpoint /offset")
     req = request.get_json()
 
     s.log.debug("receive request with body {}".format(req))
@@ -190,8 +192,9 @@ def offset():
                     # append the offset task
                     offset_task = s.dget("offset_task", line)
                     if  offset_task and 'TaskName' in task:
+                        offset_task_name = offset_task.get('TaskName')
                         offset_sequence.append(offset_task)
-                        seq_array.append("{}-{}".format(offset_task.get('TaskName'), line))
+                        seq_array.append("{}-{}".format(offset_task_name, line))
                     else:
                         offset_sequence = []
 
@@ -213,10 +216,65 @@ def offset():
         s.log.error(msg)
         res = {'error' : msg}
    
-    #start_new_thread( work_seqence, (sequence, line,))
-    
-    #res = wait_sequences_complete(seq_array)
+    return jsonify(res)
 
+@app.route('/ind', methods=['POST'])
+def ind():
+    res = {"ok":True}
+    s.log.info("request to endpoint /ind")
+    req = request.get_json()
+
+    s.log.debug("receive request with body {}".format(req))
+    if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
+        seq_array = []
+        target_value = float(req.get('Target_pressure_value'))
+        target_unit = req.get('Target_pressure_unit')
+
+        if target_unit == s.unit:
+            fs_val_keys = s.r.keys('fullscale_value@*')
+           
+            for key in fs_val_keys:
+                _, line = key.split(s.keysep)
+                fullscale_value = s.fget('fullscale_value', line)
+                s.log.debug("fullscale value for line {} is {}. Target value is: {}.".format(line, fullscale_value, target_value))
+
+                if target_value < fullscale_value:
+                    auto_init_tasks = s.dget('auto_init_tasks', line)
+                    s.log.debug("found {} auto init tasks".format(len(auto_init_tasks)))
+                    ind_sequence = []
+                    for task in auto_init_tasks:                        
+                        if 'From' in task and 'To' in task and target_value >= task.get('From') and target_value < task.get('To'):
+                            s.log.debug("append for execution task: {} ".format(task))
+                            ind_sequence.append(task)
+                            seq_array.append("{}-{}".format(task.get('TaskName'), line))
+
+                    # append the ind task
+                    ind_task = s.dget("ind_task", line)
+                    if  ind_task and 'TaskName' in task:
+                        ind_task_name = ind_task.get('TaskName')
+                        ind_sequence.append(ind_task)
+                        seq_array.append("{}-{}".format(ind_task_name, line))
+                    else:
+                        ind_sequence = []
+
+                    if len(ind_sequence) >0:
+                        start_new_thread( work_seqence, (ind_sequence, line,))
+                    else:
+                        s.log.info("No task match for line {}".format(line))
+
+            if len(seq_array) > 0:
+                res = wait_sequences_complete(seq_array)
+            else:
+                s.log.info("nothing started")
+        else:
+            msg = "wrong target unit"
+            s.log.error(msg)
+            res = {'error':msg}
+    else:
+        msg = "missing request data (Target_pressure_value or Target_pressure_unit)"
+        s.log.error(msg)
+        res = {'error' : msg}
+   
     return jsonify(res)
 
 def wait_sequences_complete(seq_array):
