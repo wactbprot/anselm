@@ -24,20 +24,7 @@ class Observe(QThread, System):
 
 
 class Anselm(System):
-    fullscale_list = [
-    {"Unit":"Pa", "Display":"SRG"     , "Value":2.0},  
-    {"Unit":"Pa", "Display":"0.1mbar" , "Value":10.0},  
-    {"Unit":"Pa", "Display":"0.25mbar", "Value":25.0}, 
-    {"Unit":"Pa", "Display":"1mbar"   , "Value":100}, 
-    {"Unit":"Pa", "Display":"10mbar"  , "Value":1000.0},  
-    {"Unit":"Pa", "Display":"100mbar" , "Value":10000.},  
-    {"Unit":"Pa", "Display":"1000mbar", "Value":100000.0},  
-    {"Unit":"Pa", "Display":"0.1Torr" , "Value":13.3}, 
-    {"Unit":"Pa", "Display":"1Torr"   , "Value":133.0},  
-    {"Unit":"Pa", "Display":"10Torr"  , "Value":1330.0},  
-    {"Unit":"Pa", "Display":"100Torr" , "Value":13300.0},  
-    {"Unit":"Pa", "Display":"1000Torr", "Value":133000.0}, 
-    ]
+    
     std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
     year_select = ["2019", "2018", "2017"]
     dut_branches = ["dut_a", "dut_b", "dut_c"]
@@ -65,7 +52,20 @@ class Anselm(System):
 
     def __init__(self):
         super().__init__()
-
+        self.fullscale_list = [
+                                {"Unit":self.unit, "Display":"SRG"     , "Value":2.0},  
+                                {"Unit":self.unit, "Display":"0.1mbar" , "Value":10.0},  
+                                {"Unit":self.unit, "Display":"0.25mbar", "Value":25.0}, 
+                                {"Unit":self.unit, "Display":"1mbar"   , "Value":100}, 
+                                {"Unit":self.unit, "Display":"10mbar"  , "Value":1000.0},  
+                                {"Unit":self.unit, "Display":"100mbar" , "Value":10000.},  
+                                {"Unit":self.unit, "Display":"1000mbar", "Value":100000.0},  
+                                {"Unit":self.unit, "Display":"0.1Torr" , "Value":13.3}, 
+                                {"Unit":self.unit, "Display":"1Torr"   , "Value":133.0},  
+                                {"Unit":self.unit, "Display":"10Torr"  , "Value":1330.0},  
+                                {"Unit":self.unit, "Display":"100Torr" , "Value":13300.0},  
+                                {"Unit":self.unit, "Display":"1000Torr", "Value":133000.0}, 
+                                ]
         self.db = DB()
         self.worker = Worker()
         self.observer_thread = Observe()
@@ -235,7 +235,7 @@ class Anselm(System):
 
         tasks = self.db.get_tasks(doc_id = doc_id)
         self.log.debug("found {} tasks ".format(len(tasks)))
-        ok = self.validate_tasks(tasks, line)
+        ok = self.evaluate_auto_tasks(tasks, line)
         
         if ok:
             first_item = "tasks ok"
@@ -247,7 +247,7 @@ class Anselm(System):
 
         return c
 
-    def get_pressure_from_range_expr(range_expr, line):
+    def get_pressure_from_range_expr(self, range_expr, line):
         value = None
         unit = None
 
@@ -260,17 +260,17 @@ class Anselm(System):
             '@fullscale/100000' :0.00001
         }
 
-        if str_expr in  q:
-            value = s.fget("fullscale_value", line)*q[range_expr]
-            unit = s.fget("fullscale_unit", line)
-
+        if range_expr in  q:
+            value = self.fget("fullscale_value", line)*q[range_expr]
+            unit = self.aget("fullscale_unit", line)
+            self.log.debug("replaced {} {}".format(value, unit))
         else:
             msg = "unknown range expression"
-            s.log.error(msg)
+            self.log.error(msg)
 
         return value, unit
 
-    def validate_tasks(self, tasks, line):
+    def evaluate_auto_tasks(self, tasks, line):
         offset_all_sequence = []
         auto_init_tasks = []
         auto_offset_tasks = []
@@ -278,33 +278,39 @@ class Anselm(System):
         res = True
         for task in tasks:
             task_name = task.get('TaskName')
-            task_data = {'TaskName':task_name}
             if 'From' in task:
-                task_data['From'] , task_data['FromUnit'] , = get_pressure_from_range_expr(task.get('From'), line)
+                task['From'] , task['FromUnit'] , = self.get_pressure_from_range_expr(task.get('From'), line)
             if 'To' in task:
-                task_data['To'] , task_data['ToUnit'] , = get_pressure_from_range_expr(task.get('To'), line)
+                task['To'] , task['ToUnit'] , = self.get_pressure_from_range_expr(task.get('To'), line)
                     
             if task_name.startswith('auto_init_'):
-                auto_init_tasks.append(task_data)
+                auto_init_tasks.append(task)
 
             if  task_name.startswith('auto_offset_'):        
-                auto_offset_tasks.append(task_name)
+                auto_offset_tasks.append(task)
            
             if task_name == 'offset':
-                self.aset('offset_task_name', line, task_data)
+                self.aset('offset_task', line, task)
            
             if task_name == 'ind':
-                self.aset('ind_task_name', line, task_data)
+                self.aset('ind_task', line, task)
         
-        ## go on with checks ...
-        self.aset("offset_all_sequence", line, offset_all_sequence)
+        for init_task in auto_init_tasks:
+            sufix = init_task.get('TaskName').replace("auto_init_", "")
+            related_offset_task =  "auto_offset_{}".format(sufix)
+            for offset_task in  auto_offset_tasks:
+                if offset_task.get('TaskName') ==  related_offset_task:
+                    offset_all_sequence.append(init_task) 
+                    offset_all_sequence.append(offset_task)
 
+       
+        self.aset("offset_all_sequence", line, offset_all_sequence)
+        self.aset("auto_init_tasks", line, auto_init_tasks)
         return res
 
     def run_selected(self, combo, line):
         
         self.run_task(line)
-
     
     def task_selected(self, combo, line):
 
@@ -381,7 +387,7 @@ class Anselm(System):
             self.aset('task', line, task)
 
     def closeEvent(self, event):
-        self.log.info("flush redis database")
+        self.log.info("flush redis database, bye!")
         self.r.flushdb()
         if True:
             event.accept()

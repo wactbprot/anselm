@@ -37,17 +37,17 @@ def dut_max():
              "Dut_A": {
                      "Value": 0.0,
                      "Type": "dut_max_a",
-                     "Unit": "Pa"
+                     "Unit": s.unit
                  },
              "Dut_B": {
                      "Value": 0.0,
                      "Type": "dut_max_b",
-                     "Unit": "Pa"
+                     "Unit": s.unit
                  },
              "Dut_C": {
                      "Value": 0.0,
                      "Type": "dut_max_c",
-                     "Unit": "Pa"
+                     "Unit": s.unit
                  }
              }
     keys = s.r.keys('calid@*')
@@ -89,11 +89,11 @@ def target_pressure():
     s.log.info("request to target pressures")
     keys = s.r.keys('calid@*')
     target_pressure_values = []
-    target_pressure_unit = "Pa"
+  
     res = {
             "Target_pressure": {
                          "Caption": "target pressure",
-                         "Unit": target_pressure_unit,
+                         "Unit": s.unit,
                          "Selected": "1",
                          "Select": []
             }
@@ -108,7 +108,7 @@ def target_pressure():
             if todo_pressure.get('Unit') == "mbar":
                 conv_factor = 100
 
-            if todo_pressure.get('Unit') == target_pressure_unit:
+            if todo_pressure.get('Unit') == s.unit:
                 conv_factor = 1
 
             for v in todo_pressure.get('Value'):
@@ -126,10 +126,10 @@ def target_pressure():
             formated_val = '{:.1e}'.format(v) 
             if first:
                 res['Target_pressure']['Selected'] = formated_val
-                res['Target_pressure']['Unit'] = target_pressure_unit
+                res['Target_pressure']['Unit'] = s.unit
                 first = False
 
-            res['Target_pressure']['Select'].append({'value':formated_val , 'display': "{} Pa".format( formated_val) })
+            res['Target_pressure']['Select'].append({'value':formated_val , 'display': "{} {}".format( formated_val, s.unit) })
     else:
         msg = "no target values found"
         s.log.error(msg)
@@ -140,7 +140,7 @@ def target_pressure():
     else:
         return jsonify(res)
 
-@app.route('/offset_sequences', methods=['GET'])
+@app.route('/offset_sequences', methods=['GET','POST'])
 def offset_sequences():
     s.log.info("request to offset sequence")
     keys = s.r.keys('offset_all_sequence@*')
@@ -148,10 +148,8 @@ def offset_sequences():
     for key in keys:
         _ , line = key.split(s.keysep)
         sequence = s.dget('offset_all_sequence', line)
-        s.log.debug(sequence)
-        for task_name in sequence:
-            s.log.debug(task_name)        
-            seq_array.append("{}-{}".format(task_name, line)) 
+        for task in sequence:
+            seq_array.append("{}-{}".format(task.get('TaskName'), line)) 
 
         start_new_thread( work_seqence, (sequence, line,))
     
@@ -164,18 +162,57 @@ def offset():
     res = {"ok":True}
     s.log.info("request to offset")
     req = request.get_json()
+
     s.log.debug("receive request with body {}".format(req))
-    if "Target_pressure_value" in req and "Target_pressure_unit" in req:
-        pass
+    if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
+        seq_array = []
+        target_value = float(req.get('Target_pressure_value'))
+        target_unit = req.get('Target_pressure_unit')
+
+        if target_unit == s.unit:
+            fs_val_keys = s.r.keys('fullscale_value@*')
+           
+            for key in fs_val_keys:
+                _, line = key.split(s.keysep)
+                fullscale_value = s.fget('fullscale_value', line)
+                s.log.debug("fullscale value for line {} is {}. Target value is: {}.".format(line, fullscale_value, target_value))
+
+                if target_value < fullscale_value:
+                    auto_init_tasks = s.dget('auto_init_tasks', line)
+                    s.log.debug("found {} auto init tasks".format(len(auto_init_tasks)))
+                    offset_sequence = []
+                    for task in auto_init_tasks:                        
+                        if 'From' in task and 'To' in task and target_value >= task.get('From') and target_value < task.get('To'):
+                            s.log.debug("append for execution task: {} ".format(task))
+                            offset_sequence.append(task)
+                            seq_array.append("{}-{}".format(task.get('TaskName'), line))
+
+                    # append the offset task
+                    offset_task = s.dget("offset_task", line)
+                    if  offset_task and 'TaskName' in task:
+                        offset_sequence.append(offset_task)
+                        seq_array.append("{}-{}".format(offset_task.get('TaskName'), line))
+                    else:
+                        offset_sequence = []
+
+                    if len(offset_sequence) >0:
+                        start_new_thread( work_seqence, (offset_sequence, line,))
+                    else:
+                        s.log.info("No task match for line {}".format(line))
+
+            if len(seq_array) > 0:
+                res = wait_sequences_complete(seq_array)
+            else:
+                s.log.info("nothing started")
+        else:
+            msg = "wrong target unit"
+            s.log.error(msg)
+            res = {'error':msg}
     else:
         msg = "missing request data (Target_pressure_value or Target_pressure_unit)"
         s.log.error(msg)
-        res {"error" : msg}
-    # find valid init by means of req.target_pressure
-    # init
-    # offset
-    # save if save=True
-
+        res = {'error' : msg}
+   
     #start_new_thread( work_seqence, (sequence, line,))
     
     #res = wait_sequences_complete(seq_array)
@@ -183,6 +220,12 @@ def offset():
     return jsonify(res)
 
 def wait_sequences_complete(seq_array):
+    """``seq_array`` is an array of strings. 
+    This strings have the form <TaskName>-<Line>. 
+    If the task with the name <TaskName> 
+    belonging to <line> is completed, the worker publishes 
+    the <TaskName>-<Line> string to the ``srv`` channel.
+    """
     s.p.subscribe("srv")
     s.log.info('start listening redis on channel srv')
     for item in s.p.listen():
@@ -202,14 +245,18 @@ def wait_sequences_complete(seq_array):
 def work_seqence(sequence, line):
     worker = Worker()
     delay = 0.2 #s
-    for task_name in sequence:
-        db.choose_task(task_name, line)
-        s.log.debug("choose {} in line {}, start working on".format(task_name, line))
-        task = s.dget("task", line)
+    for task in sequence:
+        defaults = s.dget('defaults', line)
+        if defaults:
+            task = db.replace_defaults(task, defaults)
+            s.log.debug("defaults: {}".format(defaults))
+            s.log.debug("task: {}".format(task))
+
+      
         worker_fn = worker.get_worker(task, line)
         time.sleep(delay)
         worker_fn(task, line)
-        data =  "{}-{}".format(task_name, line)
+        data =  "{}-{}".format(task.get('TaskName'), line)
         s.log.debug("will publish to srv for data {}".format(data))
         s.r.publish('srv', data)
         
