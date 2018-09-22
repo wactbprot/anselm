@@ -51,7 +51,17 @@ class System:
         self.log.info("pubsub ok")
 
     def gen_key(self, key_prefix, line):
+
         return '{}{}{}'.format(key_prefix, self.keysep, line) 
+
+    def get_keys(self, key_prefix):
+        
+        return self.r.keys("{}{}*".format(key_prefix, self.keysep))
+    
+    def get_lines(self, key_prefix):
+        keys = self.get_keys(key_prefix) 
+
+        return [key.split(self.keysep)[1] for key in keys]
 
     def aset(self, key_prefix, line, value, expire=False):
 
@@ -71,6 +81,9 @@ class System:
             self.r.pexpire(k, self.expire_time)
 
     def aget(self, key_prefix, line):
+        """Get the element described by key_prefix and line
+        from mem store
+        """
         k = self.gen_key(key_prefix, line)
         
         return self.r.get(k)
@@ -87,6 +100,8 @@ class System:
 
         
     def fget(self, key_prefix, line):
+        """Get a float from mem store by key_prefix and line
+        """
         v = self.aget(key_prefix, line)
         
         if v:

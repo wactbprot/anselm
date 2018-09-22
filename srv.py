@@ -22,7 +22,7 @@ def home():
 
 @app.route('/cal_ids')
 def calids():
-    keys = s.r.keys('cal_id@*')
+    keys = s.get_keys('cal_id')
     cal_ids = []
     for key in keys:
         cal_ids.append(s.r.get(key))

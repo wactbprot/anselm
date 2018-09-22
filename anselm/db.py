@@ -114,11 +114,6 @@ class DB(System):
             self.log.error("document with id: {} does not exist".format(id))
             return None
 
-    def set_doc(self, doc):
-        self.log.info("try to save document")
-        res = self.db.save(doc)
-        self.log.info(res)
-        
     def replace_defaults(self, task, defaults):
         strtask = json.dumps(task)
         if isinstance(defaults, dict):
@@ -165,23 +160,28 @@ class DB(System):
             self.log.error("line {} contains no doc_id")
 
     def save_results(self):
-        cal_keys = self.r.keys("cal_id@*")
-        for cal_key in cal_keys:
-            _, line = cal_key.split(self.keysep)
+        """
+        """
+        lines = self.get_lines("cal_id")
+        for line in lines:
+            cal_id = self.aget("cal_id", line)
+            doc = self.get_doc(cal_id)
             doc_path = self.aget("doc_path", line)
             results = self.dget("result", line)
-            self.log.debug("try to save results: {}".format(results))
-            if doc_path and results:
-                doc_path_array = doc_path.split(".")
-                cal_id = self.aget("cal_id", line)
-                doc = self.get_doc(cal_id)
+            if doc and doc_path and results:
                 for result in results:
-                    self.log.debug("save components are cal_id {}, doc_path_array: {}, result: {}".format(cal_id, doc_path_array, result))
-                    self.doc_write_result(doc, doc_path_array, result)
-                self.set_doc(doc)
+                    self.log.debug("""
+                                    save components are cal_id {}, 
+                                    doc_path_array: {},
+                                    result: {}""".format(cal_id, doc_path, result))
+                    self.write_result_to_doc(doc, doc_path, result)
+                self.store_doc(doc)
                 
     
-    def doc_write_result(self, doc, doc_path_array, result):
+    def write_result_to_doc(self, doc, doc_path, result):
+        """Writes result to doc under the given path.
+        """
+        doc_path_array = doc_path.split(".")
         for key in doc_path_array[:-1]:
             doc = doc.setdefault(key, {})
         if not doc_path_array[-1] in doc:
