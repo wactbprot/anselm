@@ -169,18 +169,18 @@ class DB(System):
             self.log.error("line {} contains no doc_id")
 
     def save_results(self):
-        cal_keys = self.r.keys("cal_id@*")
-        for cal_key in cal_keys:
-            _, line = cal_key.split(self.keysep)
+      
+        lines = self.get_lines('cal_id')
+        for line in lines:
             doc_path = self.aget("doc_path", line)
             results = self.dget("result", line)
-            if doc_path and results:
-                self.log.debug("try to save results: {}".format(results))
-                cal_id = self.aget("cal_id", line)
+            cal_id = self.aget("cal_id", line)
+            if cal_id and doc_path and results:
                 doc = self.get_doc(cal_id)
+                self.log.debug("try to save results: {}".format(results))
                 for result in results:
-                    self.doc_write_result(doc, doc_path, result)
                     self.log.debug("components are cal_id {}, doc_path_array: {}, result: {} saved".format(cal_id, doc_path, result))
+                    self.doc_write_result(doc, doc_path, result)
                     self.adelete("result", line)
                     self.log.debug("deleted result of line {} from mem".format(line))
                 self.set_doc(doc)
