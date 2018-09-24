@@ -111,6 +111,7 @@ class DB(System):
             return []
 
     def get_doc(self, id):
+        
         doc = self.db[id]
         if doc:
             return doc
@@ -119,11 +120,13 @@ class DB(System):
             return None
 
     def set_doc(self, doc):
+
         self.log.info("try to save document")
         res = self.db.save(doc)
         self.log.info(res)
         
     def replace_defaults(self, task, defaults):
+
         strtask = json.dumps(task)
         if isinstance(defaults, dict):
             for key, val in defaults.items():
