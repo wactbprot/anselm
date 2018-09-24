@@ -114,6 +114,11 @@ class DB(System):
             self.log.error("document with id: {} does not exist".format(id))
             return None
 
+    def set_doc(self, doc):
+        self.log.info("try to save document")
+        res = self.db.save(doc)
+        self.log.info(res)
+        
     def replace_defaults(self, task, defaults):
         strtask = json.dumps(task)
         if isinstance(defaults, dict):
@@ -160,30 +165,70 @@ class DB(System):
             self.log.error("line {} contains no doc_id")
 
     def save_results(self):
-        """
-        """
-        lines = self.get_lines("cal_id")
-        for line in lines:
-            cal_id = self.aget("cal_id", line)
-            doc = self.get_doc(cal_id)
+        cal_keys = self.r.keys("cal_id@*")
+        for cal_key in cal_keys:
+            _, line = cal_key.split(self.keysep)
             doc_path = self.aget("doc_path", line)
             results = self.dget("result", line)
-            if doc and doc_path and results:
+            self.log.debug("try to save results: {}".format(results))
+            if doc_path and results:
+               
+                cal_id = self.aget("cal_id", line)
+                doc = self.get_doc(cal_id)
                 for result in results:
-                    self.log.debug("""
-                                    save components are cal_id {}, 
-                                    doc_path_array: {},
-                                    result: {}""".format(cal_id, doc_path, result))
-                    self.write_result_to_doc(doc, doc_path, result)
-                self.store_doc(doc)
-                
+                    self.log.debug("save components are cal_id {}, doc_path_array: {}, result: {}".format(cal_id, doc_path, result))
+                    self.doc_write_result(doc, doc_path, result)
+                self.set_doc(doc)
     
-    def write_result_to_doc(self, doc, doc_path, result):
-        """Writes result to doc under the given path.
-        """
+    def doc_write_result(self, doc, doc_path, result):
+        #
+        # last entry is something like Pressure (Type, Value and Unit) 
+        # or (!) OperationKind 
         doc_path_array = doc_path.split(".")
+        last_entr = doc_path_array[-1]  
+
         for key in doc_path_array[:-1]:
             doc = doc.setdefault(key, {})
-        if not doc_path_array[-1] in doc:
-            doc[doc_path_array[-1]] = []
-            doc[doc_path_array[-1]].append(result)
+
+        if isinstance(result, dict):
+            if 'Type' in result and 'Value' in result:
+                if last_entr not in doc:
+                    result = self.ensure_result_struct(result)
+                    doc[last_entr] = []
+                    doc[last_entr].append(result)
+                else:
+                    found = False
+                    for entr in doc[last_entr]:
+                        if entr.get('Type') == result.get('Type'):
+                            if isinstance(result.get('Value'), list) and len(result.get('Value')) > 1: 
+                                entr = result # override
+                            else:
+                                found = True
+                                entr['Value'].append( result['Value'] )
+                                entr['Unit'] = result['Unit']
+                                if result.get('SdValue'):
+                                    if entr.get('SdValue'):
+                                        entr['SdValue'].append( result['SdValue'] )
+                                if result.get('N'):
+                                    if entr.get('N'):
+                                        entr['N'].append( result['N'] )
+                    if not found:
+                        result = self.ensure_result_struct(result)
+                        doc[last_entr].append(result)
+
+            else:
+                result = self.ensure_result_struct(result)
+                doc[last_entr] = result   
+        else:
+            doc[last_entr] = result       
+
+    def ensure_result_struct(self, result):
+
+        if not isinstance(result['Value'], list):
+            result['Value'] = [result['Value']] 
+        if result.get('SdValue') and not isinstance(result['SdValue'], list):
+            result['SdValue'] = [result['SdValue']]
+        if result.get('N') and not isinstance(result['N'], list):
+            result['N'] = [result['N']]
+
+        return result
