@@ -2,9 +2,9 @@
     "couchdb": {
         "host": "localhost",
         "port": 5984,
-        "database": "vl_db",
+        "database": "vl_db_work",
         "view": {
-            "custobj": "share/CustomerObject",
+            "devices": "share/DeviceClass",
             "calids": "share/Year_Standard-Type_Certificate_Issue"
         }    
     },"redis":{

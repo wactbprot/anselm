@@ -62,6 +62,11 @@ class System:
         keys = self.get_keys(key_prefix) 
 
         return [key.split(self.keysep)[1] for key in keys]
+    
+    def adelete(self, key_prefix, line):
+
+        k = self.gen_key(key_prefix, line)
+        self.r.delete(k)
 
     def aset(self, key_prefix, line, value, expire=False):
 

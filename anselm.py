@@ -4,9 +4,10 @@ import json
 from anselm.system import System # pylint: disable=E0611
 from anselm.db import DB # pylint: disable=E0611
 from anselm.worker import Worker # pylint: disable=E0611
-from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton, QComboBox, QGridLayout, QPlainTextEdit, QLabel, QLineEdit
+from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton
+from PyQt5.QtWidgets import QComboBox, QGridLayout, QPlainTextEdit, QLabel, QLineEdit
 from PyQt5.QtCore import QThread, pyqtSignal , Qt
-import sys
+
 
 class Observe(QThread, System):
     signal = pyqtSignal('PyQt_PyObject')
@@ -40,7 +41,7 @@ class Anselm(System):
     cal_id_col = 2
     fullscale_col = 3
     dut_branch_col = 4
-    custobj_col = 5
+    devices_col = 5
     task_col = 6
     run_btn_col = 7
     result_col= 1
@@ -66,6 +67,14 @@ class Anselm(System):
                                 {"Unit":self.unit, "Display":"100Torr" , "Value":13300.0},  
                                 {"Unit":self.unit, "Display":"1000Torr", "Value":133000.0}, 
                                 ]
+        self.range_exprs = {
+                            'fullscale' :1,
+                            'fullscale/10' :0.1,
+                            'fullscale/100' :0.01,
+                            'fullscale/10000' :0.0001,
+                            'fullscale/100000' :0.00001
+                        }
+
         self.db = DB()
         self.worker = Worker()
         self.observer_thread = Observe()
@@ -164,7 +173,7 @@ class Anselm(System):
         
         line = self.current_grid_line
         self.add_widget_to_grid(self.make_cal_id_combo(line = line), line, self.cal_id_col)
-        self.add_widget_to_grid(self.make_custobj_combo(line = line), line, self.custobj_col)
+        self.add_widget_to_grid(self.make_device_combo(line = line), line, self.devices_col)
         self.add_widget_to_grid(self.make_fullscale_combo(line = line), line, self.fullscale_col)
         self.add_widget_to_grid(self.make_dut_branch_combo(line = line), line, self.dut_branch_col)
         self.add_widget_to_grid(self.make_result_label(line = line), line, self.result_col)
@@ -230,55 +239,50 @@ class Anselm(System):
 
         return c
 
-    def make_custobj_combo(self, line):
+    def make_device_combo(self, line):
 
-        cust_obj_ids = self.db.get_custobj_ids()
+        device_ids = self.db.get_device_ids()
 
-        self.log.debug("found following custobj ids {}".format(cust_obj_ids))
+        self.log.debug("found following devices ids {}".format(device_ids))
 
-        c = self.make_combo(cust_obj_ids, first_item="select read out device", last_item=False)
-        c.currentIndexChanged.connect(lambda: self.custobj_selected(c, line))
+        c = self.make_combo(device_ids, first_item="select read out device", last_item=False)
+        c.currentIndexChanged.connect(lambda: self.device_selected(c, line))
 
         return c
 
     def make_task_combo(self, doc_id, line):
-
+        ok = False
         tasks = self.db.get_tasks(doc_id = doc_id)
-        self.log.debug("found {} tasks ".format(len(tasks)))
-        ok = self.evaluate_auto_tasks(tasks, line)
+        if tasks:
+            self.log.debug("found {} tasks ".format(len(tasks)))
+            ok = self.evaluate_auto_tasks(tasks, line)
         
-        if ok:
-            first_item = "tasks ok"
+            if ok:
+                first_item = "tasks ok"
+                c = self.make_combo([task.get('TaskName') for task in tasks], first_item=first_item, last_item=False)
+                c.currentIndexChanged.connect(lambda: self.task_selected(c, line))
+            else:
+                first_item = "task name problem"
+                c = self.make_combo([task.get('TaskName') for task in tasks], first_item=first_item, last_item=False)
         else:
-            first_item = "task name problem"
-
-        c = self.make_combo([task.get('TaskName') for task in tasks], first_item=first_item, last_item=False)
-        c.currentIndexChanged.connect(lambda: self.task_selected(c, line))
-
+                c = self.make_combo([], first_item=first_item, last_item=False)
         return c
 
     def get_pressure_from_range_expr(self, range_expr, line):
-        value = None
-        unit = None
+        value = self.fget("fullscale_value", line)
+        unit = self.aget("fullscale_unit", line)
 
-        q = {
-            '@fullscale' :1,
-            '@fullscale/10' :0.1,
-            '@fullscale/100' :0.01,
-            '@fullscale/1000' :0.001,
-            '@fullscale/10000' :0.0001,
-            '@fullscale/100000' :0.00001
-        }
+        if unit and value and range_expr in  self.range_exprs:
+            value =  value * self.range_exprs[range_expr]
+           
+            self.log.debug("found {} {}".format(value, unit))
+            
+            return value, unit
 
-        if range_expr in  q:
-            value = self.fget("fullscale_value", line)*q[range_expr]
-            unit = self.aget("fullscale_unit", line)
-            self.log.debug("replaced {} {}".format(value, unit))
         else:
             msg = "unknown range expression"
             self.log.error(msg)
-
-        return value, unit
+            return None, None
 
     def evaluate_auto_tasks(self, tasks, line):
         offset_all_sequence = []
@@ -333,7 +337,7 @@ class Anselm(System):
 
         self.log.info("task with name {} selected at line {}".format(task_name, line))
 
-    def custobj_selected(self, combo, line):
+    def device_selected(self, combo, line):
 
         doc_id = combo.currentText()
         self.aset('doc_id', line, doc_id)

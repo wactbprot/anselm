@@ -32,14 +32,14 @@ class DB(System):
         self.db.save(doc)
 
        
-    def get_custobj_ids(self):         
-        view_con = self.db_dict.get('view').get('custobj')
+    def get_device_ids(self):         
+        view_con = self.db_dict.get('view').get('devices')
         try:
             view = self.db.view(view_con)
             res = [doc.get('id') for doc in view] 
         except Exception as inst:
-            self.log.error("cust view does not work: {}".format(inst))
-            res = ["dummy cust"]
+            self.log.error("device view does not work: {}".format(inst))
+            res = ["dummy device"]
             self.log.warn("return dummy value")
 
         return res
@@ -66,6 +66,9 @@ class DB(System):
         if doc:
             if 'CustomerObject' in doc:
                 red_doc = doc.get('CustomerObject')
+            
+            if 'DeviceClass' in doc:
+                red_doc = doc.get('DeviceClass')
             
             if 'CalibrationObject' in doc:
                 red_doc = doc.get('CalibrationObject')
@@ -95,6 +98,7 @@ class DB(System):
 
     def get_task(self, doc_id, task_name):         
         doc = self.get_red_doc(doc_id)
+        
         if doc and 'Task' in doc:
             tasks = doc.get('Task')
             for task in tasks:
@@ -170,20 +174,22 @@ class DB(System):
             _, line = cal_key.split(self.keysep)
             doc_path = self.aget("doc_path", line)
             results = self.dget("result", line)
-            self.log.debug("try to save results: {}".format(results))
             if doc_path and results:
-               
+                self.log.debug("try to save results: {}".format(results))
                 cal_id = self.aget("cal_id", line)
                 doc = self.get_doc(cal_id)
                 for result in results:
-                    self.log.debug("save components are cal_id {}, doc_path_array: {}, result: {}".format(cal_id, doc_path, result))
                     self.doc_write_result(doc, doc_path, result)
+                    self.log.debug("components are cal_id {}, doc_path_array: {}, result: {} saved".format(cal_id, doc_path, result))
+                    self.adelete("result", line)
+                    self.log.debug("deleted result of line {} from mem".format(line))
                 self.set_doc(doc)
     
     def doc_write_result(self, doc, doc_path, result):
         #
         # last entry is something like Pressure (Type, Value and Unit) 
         # or (!) OperationKind 
+        #
         doc_path_array = doc_path.split(".")
         last_entr = doc_path_array[-1]  
 
@@ -215,7 +221,6 @@ class DB(System):
                     if not found:
                         result = self.ensure_result_struct(result)
                         doc[last_entr].append(result)
-
             else:
                 result = self.ensure_result_struct(result)
                 doc[last_entr] = result   
