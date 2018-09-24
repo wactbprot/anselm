@@ -111,7 +111,6 @@ class DB(System):
             return []
 
     def get_doc(self, id):
-        
         doc = self.db[id]
         if doc:
             return doc
@@ -120,13 +119,11 @@ class DB(System):
             return None
 
     def set_doc(self, doc):
-
         self.log.info("try to save document")
         res = self.db.save(doc)
         self.log.info(res)
         
     def replace_defaults(self, task, defaults):
-
         strtask = json.dumps(task)
         if isinstance(defaults, dict):
             for key, val in defaults.items():
@@ -147,7 +144,6 @@ class DB(System):
         return task
     
     def choose_task(self, task_name, line):
-
         doc_id = self.aget('doc_id', line)
         if doc_id:
             task_db = self.get_task(doc_id, task_name)
@@ -172,7 +168,6 @@ class DB(System):
             self.log.error("line {} contains no doc_id")
 
     def save_results(self):
-      
         lines = self.get_lines('cal_id')
         for line in lines:
             doc_path = self.aget("doc_path", line)
