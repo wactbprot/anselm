@@ -12,15 +12,16 @@ db = DB()
 @app.route('/')
 def home():
     return jsonify({"routes":[
-                                "/cal_ids",
-                                "/dut_max",
-                                "/target_pressures",
-                                "/offset_sequences"
-                                "/offset",
-                                "/ind"
+                               {"route": "/cal_ids", "method":['GET']},
+                               {"route": "/dut_max","method":['GET']},
+                               {"route": "/save_dut","method":['POST'],"data":['DocPath']},
+                               {"route": "/target_pressures","method":['GET']},
+                               {"route": "/offset_sequences","method":['GET','POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
+                               {"route": "/offset","method":['POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
+                               {"route": "/ind","method":['POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
                             ] })
 
-@app.route('/cal_ids')
+@app.route('/cal_ids', methods=['GET'])
 def calids():
     keys = s.get_keys('cal_id')
     cal_ids = []
@@ -31,9 +32,28 @@ def calids():
     
     return jsonify({"ids":cal_ids })
 
+@app.route('/save_dut', methods=['POST'])
+def save_dut():
+    s.log.info("request dut branch")
+    res = {"ok":True}
+    req = request.get_json()
+    if 'DocPath' in req:
+        doc_path = req.get('DocPath')
+        lines = s.get_lines("cal_id")
+        for line in lines:
+            s.aset("result", line, [s.aget("dut_branch", line)])
+            s.aset("doc_path", line, doc_path)
+        db.save_results()
+    else:
+        msg = "missing DocPath"
+        res['error'] = msg
+        s.log.error(msg)
+
+    return jsonify(res)
+
 @app.route('/dut_max', methods=['GET'])
 def dut_max():
-    s.log.info("request max values for dut branchs")
+    s.log.info("request max values for dut branch")
     
     res =   {
              "Dut_A": {
@@ -52,16 +72,13 @@ def dut_max():
                      "Unit": s.unit
                  }
              }
-    keys = s.r.keys('calid@*')
-    for key in keys:
-        calid = s.r.get(key)
-        _ , line = key.split(s.keysep)
-
+    lines = s.get_lines('cal_id')
+    for line in lines:
         fullscale_value = s.fget("fullscale_value", line)
         fullscale_unit = s.aget("fullscale_unit", line)        
         dut_branch = s.aget("dut_branch", line)
 
-        if calid and fullscale_value and dut_branch:
+        if  fullscale_value and dut_branch:
 
             if dut_branch == "dut_a" and res.get('Dut_A').get('Value') < fullscale_value:
                 res['Dut_A']['Value'] = fullscale_value
@@ -76,7 +93,7 @@ def dut_max():
                 res['Dut_C']['Unit'] = fullscale_unit
               
         else:
-            msg = "missing setup for {}".format(calid)
+            msg = "missing setup for line {}".format(line)
             res['error'] = msg
             s.log.error(msg)
             break
@@ -89,7 +106,7 @@ def dut_max():
 @app.route('/target_pressures', methods=['GET'])
 def target_pressure():
     s.log.info("request to target pressures")
-    keys = s.r.keys('cal_id@*')
+    keys = s.get_keys('cal_id')
     target_pressure_values = []
   
     res = {
@@ -145,10 +162,9 @@ def target_pressure():
 @app.route('/offset_sequences', methods=['GET','POST'])
 def offset_sequences():
     s.log.info("request to offset sequence")
-    keys = s.r.keys('offset_all_sequence@*')
+    lines = s.get_lines('offset_all_sequence')
     seq_array = []
-    for key in keys:
-        _ , line = key.split(s.keysep)
+    for line in lines:
         sequence = s.dget('offset_all_sequence', line)
         for task in sequence:
             seq_array.append("{}-{}".format(task.get('TaskName'), line)) 
@@ -164,7 +180,6 @@ def offset():
     res = {"ok":True}
     s.log.info("request to endpoint /offset")
     req = request.get_json()
-
     s.log.debug("receive request with body {}".format(req))
     if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
         seq_array = []
@@ -172,7 +187,7 @@ def offset():
         target_unit = req.get('Target_pressure_unit')
 
         if target_unit == s.unit:
-            fs_val_keys = s.r.keys('fullscale_value@*')
+            fs_val_keys = s.get_keys('fullscale_value')
            
             for key in fs_val_keys:
                 _, line = key.split(s.keysep)
@@ -183,8 +198,10 @@ def offset():
                     auto_init_tasks = s.dget('auto_init_tasks', line)
                     s.log.debug("found {} auto init tasks".format(len(auto_init_tasks)))
                     offset_sequence = []
+                   
                     for task in auto_init_tasks:                        
                         if 'From' in task and 'To' in task and target_value >= task.get('From') and target_value < task.get('To'):
+                           
                             s.log.debug("append for execution task: {} ".format(task))
                             offset_sequence.append(task)
                             seq_array.append("{}-{}".format(task.get('TaskName'), line))
@@ -241,16 +258,18 @@ def ind():
                 if target_value < fullscale_value:
                     auto_init_tasks = s.dget('auto_init_tasks', line)
                     s.log.debug("found {} auto init tasks".format(len(auto_init_tasks)))
-                    ind_sequence = []
+                    ind_sequence = [] 
+                    
                     for task in auto_init_tasks:                        
                         if 'From' in task and 'To' in task and target_value >= task.get('From') and target_value < task.get('To'):
+                           
                             s.log.debug("append for execution task: {} ".format(task))
                             ind_sequence.append(task)
                             seq_array.append("{}-{}".format(task.get('TaskName'), line))
 
                     # append the ind task
                     ind_task = s.dget("ind_task", line)
-                    if  ind_task and 'TaskName' in task:
+                    if ind_task and 'TaskName' in task:
                         ind_task_name = ind_task.get('TaskName')
                         ind_sequence.append(ind_task)
                         seq_array.append("{}-{}".format(ind_task_name, line))

@@ -40,12 +40,17 @@ install and run
     > 
     > ./anselm.sh & ./srv.sh
 
-relayServer
-===========
+curl
+====
 
 .. code-block:: shell
   
-  curl -d '{"Action":"HTTP","Url":"http://localhost:50005/dut_max"}'  http://localhost:55555
-  curl -d '{"Action":"HTTP","Url":"http://localhost:50005/target_pressures"}' http://localhost:55555
-  curl -d '{"Action":"HTTP","Url":"http://localhost:50005/offset_sequences"}' http://localhost:55555
+  curl http://localhost:50005/dut_max
+  curl http://localhost:50005/target_pressures
+  curl http://localhost:50005/offset_sequences
+
+  curl -H "Content-Type: application/json" -d '{"Target_pressure_value":"1","Target_pressure_unit":"Pa"}'  -X 'POST' http://localhost:50005/offset
+  curl -H "Content-Type: application/json" -d '{"Target_pressure_value":"1","Target_pressure_unit":"Pa"}'  -X 'POST' http://localhost:50005/ind
+  curl -H "Content-Type: application/json" -d '{"DocPath":"Calibration.Measurement.AuxValues.Branch"}'  -X 'POST' http://localhost:50005/save_dut
   
+ 

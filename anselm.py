@@ -68,11 +68,11 @@ class Anselm(System):
                                 {"Unit":self.unit, "Display":"1000Torr", "Value":133000.0}, 
                                 ]
         self.range_exprs = {
-                            'fullscale' :1,
-                            'fullscale/10' :0.1,
-                            'fullscale/100' :0.01,
-                            'fullscale/10000' :0.0001,
-                            'fullscale/100000' :0.00001
+                            "fullscale" :1,
+                            "fullscale/10" :0.1,
+                            "fullscale/100" :0.01,
+                            "fullscale/10000" :0.0001,
+                            "fullscale/100000" :0.00001,
                         }
 
         self.db = DB()
