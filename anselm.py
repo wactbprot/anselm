@@ -265,7 +265,9 @@ class Anselm(System):
                 first_item = "task name problem"
                 c = self.make_combo([task.get('TaskName') for task in tasks], first_item=first_item, last_item=False)
         else:
-                c = self.make_combo([], first_item=first_item, last_item=False)
+            first_item = "no task"
+            c = self.make_combo([], first_item=first_item, last_item=False)
+            
         return c
 
     def get_pressure_from_range_expr(self, range_expr, line):
@@ -343,18 +345,19 @@ class Anselm(System):
         self.aset('doc_id', line, doc_id)
         self.log.debug("select {} at line {}".format(doc_id, line))
         task_combo = self.make_task_combo(doc_id = doc_id, line = line)
-        self.add_widget_to_grid(widget=task_combo, line=line, col=self.task_col)
-        defaults = self.db.get_defaults(doc_id)
-        self.aset('defaults', line, defaults)
+        if task_combo:
+            self.add_widget_to_grid(widget=task_combo, line=line, col=self.task_col)
+            defaults = self.db.get_defaults(doc_id)
+            self.aset('defaults', line, defaults)
 
-        current_defaults_col = self.start_defaults_col
-        for label_val, edit_val in defaults.items():
-            self.log.debug(label_val)
-            self.log.debug(edit_val)
-            label_widget, edit_widget = self.make_label_edit_pair(label_val, edit_val, line)
-            self.add_widget_to_grid(label_widget, line, current_defaults_col)
-            self.add_widget_to_grid(edit_widget, line, current_defaults_col +1)
-            current_defaults_col = current_defaults_col +2
+            current_defaults_col = self.start_defaults_col
+            for label_val, edit_val in defaults.items():
+                self.log.debug(label_val)
+                self.log.debug(edit_val)
+                label_widget, edit_widget = self.make_label_edit_pair(label_val, edit_val, line)
+                self.add_widget_to_grid(label_widget, line, current_defaults_col)
+                self.add_widget_to_grid(edit_widget, line, current_defaults_col +1)
+                current_defaults_col = current_defaults_col +2
         
     def cal_id_selected(self, combo, line):
         cal_id = combo.currentText()

@@ -61,7 +61,12 @@ class DB(System):
         return res
 
     def get_red_doc(self, doc_id):
-        doc = self.db[doc_id]
+        doc = None
+        try:
+            doc = self.db[doc_id]
+        except Exception as inst:
+            self.log.error("doc view does not work: {}".format(inst))
+            
         red_doc = None
         if doc:
             if 'CustomerObject' in doc:
@@ -80,16 +85,19 @@ class DB(System):
         else:
             return None
 
-    def get_tasks(self, doc_id):         
+    def get_tasks(self, doc_id):
+              
         doc = self.get_red_doc(doc_id)
+        
         if doc and 'Task' in doc:
             return doc.get('Task')
         else:
             return None
 
-    def get_defaults(self, doc_id):         
+    def get_defaults(self, doc_id):   
+
         doc = self.get_red_doc(doc_id)
-        if 'Defaults' in doc:
+        if doc and 'Defaults' in doc:
             defaults = doc.get('Defaults')       
         else:
             defaults = {}

@@ -14,7 +14,7 @@ def home():
     return jsonify({"routes":[
                                {"route": "/cal_ids", "method":['GET']},
                                {"route": "/dut_max","method":['GET']},
-                               {"route": "/save_dut","method":['POST'],"data":['DocPath']},
+                               {"route": "/save_dut_branch","method":['POST'],"data":['DocPath']},
                                {"route": "/target_pressures","method":['GET']},
                                {"route": "/offset_sequences","method":['GET','POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
                                {"route": "/offset","method":['POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
@@ -32,9 +32,9 @@ def calids():
     
     return jsonify({"ids":cal_ids })
 
-@app.route('/save_dut', methods=['POST'])
-def save_dut():
-    s.log.info("request dut branch")
+@app.route('/save_dut_branch', methods=['POST'])
+def save_dut_branch():
+    s.log.info("request and save dut branch")
     res = {"ok":True}
     req = request.get_json()
     if 'DocPath' in req:
