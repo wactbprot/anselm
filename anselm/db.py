@@ -204,10 +204,18 @@ class DB(System):
                     found = False
                     for entr in doc[last_entr]:
                         if entr.get('Type') == result.get('Type'):
+                            found = True
                             if isinstance(result.get('Value'), list) and len(result.get('Value')) > 1: 
-                                entr = result # override
+                                self.log.debug("value is list an length > 1, overwrite")
+                                entr['Value'] = result.get('Value') # override
+                                entr['Unit'] = result.get('Unit')
+                                if result.get('SdValue'):
+                                    if entr.get('SdValue'):
+                                        entr['SdValue'] = result['SdValue'] 
+                                if result.get('N'):
+                                    if entr.get('N'):
+                                        entr['N'] = result['N'] 
                             else:
-                                found = True
                                 entr['Value'].append( result['Value'] )
                                 entr['Unit'] = result['Unit']
                                 if result.get('SdValue'):
