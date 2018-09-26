@@ -62,12 +62,12 @@ class DB(System):
 
     def get_red_doc(self, doc_id):
         doc = None
+        red_doc = None
         try:
             doc = self.db[doc_id]
         except Exception as inst:
             self.log.error("doc view does not work: {}".format(inst))
             
-        red_doc = None
         if doc:
             if 'CustomerObject' in doc:
                 red_doc = doc.get('CustomerObject')
