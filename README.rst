@@ -55,17 +55,16 @@ should start with:
 
 .. code-block:: shell
 
-        root[30431] INFO **************check redis connection**************
-        root[30431] INFO redis [ok]
-        root[30431] INFO ****************check relayServer*****************
-        root[30431] INFO relayServer [ok]
-        root[30431] INFO ******************check database******************
-        root[30431] INFO database [ok]
-        root[30431] INFO *****************check valves mpd*****************
-        root[30431] INFO valves mp [ok]
-        root[30431] INFO *****************check servo mpd******************
-        root[30431] INFO servo mp [ok]
-
+        root[31414] INFO check redis connection****************************
+        root[31414] INFO                                         redis [ok]
+        root[31414] INFO check relayServer*********************************
+        root[31414] INFO                                   relayServer [ok]
+        root[31414] INFO check database************************************
+        root[31414] INFO                                      database [ok]
+        root[31414] INFO check valves mpd**********************************
+        root[31414] INFO                                     valves mp [ok]
+        root[31414] INFO check servo mpd***********************************
+        root[31414] INFO                                      servo mp [ok]
 
 run
 ===
