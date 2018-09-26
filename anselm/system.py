@@ -24,6 +24,7 @@ class System:
         # open and parse config file
         with open('anselm/config.json') as json_config_file:
             self.config = json.load(json_config_file)
+            
         self.init_log()
         self.init_kv() 
     

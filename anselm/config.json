@@ -6,15 +6,22 @@
         "view": {
             "devices": "share/DeviceClass",
             "calids": "share/Year_Standard-Type_Certificate_Issue"
-        }    
-    },"redis":{
+        }
+    },
+    "redis": {
         "host": "localhost",
         "port": 6379,
-        "db":0
-        },
-    "relay":{
+        "db": 0
+    },
+    "relay": {
         "host": "localhost",
         "port": 55555
-        },
+    },
+    "ssmp": {
+        "host": "localhost",
+        "port": 8001,
+        "mpd_valves_id" : "mpd-se3-valves",
+        "mpd_servo_id" : "mpd-se3-servo"
+    },
     "loglevel": "DEBUG"
 }

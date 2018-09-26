@@ -28,8 +28,47 @@ install on opensuse with (su):
     > systemctl enable redis@default
 
 
-install and run
-===============
+install 
+=======
+
+.. code-block:: shell
+
+    > python3 -m venv /path/to/anselm
+    > cd /path/to/anselm
+    > source bin/activate
+    > pip install -e .
+    > 
+    > ./anselm.sh & ./srv.sh
+
+check systems
+=============
+
+.. code-block:: shell
+
+    > python3 -m venv /path/to/anselm
+    > cd /path/to/anselm
+    > source bin/activate
+    > 
+    > python  se3_system_check.py
+
+should start with:
+
+.. code-block:: shell
+
+        root[30431] INFO **************check redis connection**************
+        root[30431] INFO redis [ok]
+        root[30431] INFO ****************check relayServer*****************
+        root[30431] INFO relayServer [ok]
+        root[30431] INFO ******************check database******************
+        root[30431] INFO database [ok]
+        root[30431] INFO *****************check valves mpd*****************
+        root[30431] INFO valves mp [ok]
+        root[30431] INFO *****************check servo mpd******************
+        root[30431] INFO servo mp [ok]
+
+
+run
+===
 
 .. code-block:: shell
 
