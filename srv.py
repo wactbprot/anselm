@@ -34,6 +34,8 @@ def calids():
 
 @app.route('/save_dut_branch', methods=['POST'])
 def save_dut_branch():
+    
+    s.aset('save', 0,  "yes" )
     s.log.info("request and save dut branch")
     res = {"ok":True}
     req = request.get_json()
@@ -48,7 +50,7 @@ def save_dut_branch():
         msg = "missing DocPath"
         res['error'] = msg
         s.log.error(msg)
-
+    s.aset('save', 0,  "no" )
     return jsonify(res)
 
 @app.route('/dut_max', methods=['GET'])
@@ -161,6 +163,8 @@ def target_pressure():
 
 @app.route('/offset_sequences', methods=['GET','POST'])
 def offset_sequences():
+    
+    s.aset('save', 0,  "yes" )
     s.log.info("request to offset sequence")
     lines = s.get_lines('offset_all_sequence')
     seq_array = []
@@ -173,11 +177,13 @@ def offset_sequences():
     
     res = wait_sequences_complete(seq_array)
 
+    s.aset('save', 0,  "no" )
     return jsonify(res)
 
 @app.route('/offset', methods=['POST'])
 def offset():
     res = {"ok":True}
+    s.aset('save', 0,  "yes" )
     s.log.info("request to endpoint /offset")
     req = request.get_json()
     s.log.debug("receive request with body {}".format(req))
@@ -232,11 +238,14 @@ def offset():
         msg = "missing request data (Target_pressure_value or Target_pressure_unit)"
         s.log.error(msg)
         res = {'error' : msg}
-   
+
+    s.aset('save', 0,  "no" )
     return jsonify(res)
 
 @app.route('/ind', methods=['POST'])
 def ind():
+
+    s.aset('save', 0,  "yes" )
     res = {"ok":True}
     s.log.info("request to endpoint /ind")
     req = request.get_json()
@@ -293,7 +302,8 @@ def ind():
         msg = "missing request data (Target_pressure_value or Target_pressure_unit)"
         s.log.error(msg)
         res = {'error' : msg}
-   
+    
+    s.aset('save', 0,  "no" )
     return jsonify(res)
 
 def wait_sequences_complete(seq_array):
