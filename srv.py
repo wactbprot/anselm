@@ -13,6 +13,7 @@ db = DB()
 def home():
     return jsonify({"routes":[
                                {"route": "/cal_ids", "method":['GET']},
+                               {"route": "/next_target_pressure", "method":['GET']},
                                {"route": "/dut_max","method":['GET']},
                                {"route": "/save_dut_branch","method":['POST'],"data":['DocPath']},
                                {"route": "/target_pressures","method":['GET']},
@@ -29,6 +30,19 @@ def calids():
         cal_ids.append(s.r.get(key))
 
     s.log.info("request cal ids")
+    
+    return jsonify({"ids":cal_ids })
+
+@app.route('/next_target_pressure', methods=['GET'])
+def next_target_pressure():
+    cal_ids = []
+    line = s.get_lines('cal_id')
+    for line in lines:
+        cal_id = s.aget('cal_id', line)
+        doc = db.get_doc(cal_id)
+        last_pressure = db.get_last_target_pressure(doc)
+
+        s.log.info("check calibration {}".format(cal_id))
     
     return jsonify({"ids":cal_ids })
 
@@ -108,8 +122,6 @@ def dut_max():
 @app.route('/target_pressures', methods=['GET'])
 def target_pressure():
     s.log.info("request to target pressures")
-    keys = s.get_keys('cal_id')
-    target_pressure_values = []
   
     res = {
             "Target_pressure": {
@@ -119,38 +131,21 @@ def target_pressure():
                          "Select": []
             }
         }
-    for key in keys:
-        calid = s.r.get(key)
-        caldoc = db.get_doc(calid)
-        
-        todo_pressure = caldoc.get('Calibration', {}).get('ToDo',{}).get('Values',{}).get('Pressure')
 
-        if todo_pressure:
-            if todo_pressure.get('Unit') == "mbar":
-                conv_factor = 100
+    target_pressure = []
+    lines = s.get_lines('cal_id')
+    for line in lines:
 
-            if todo_pressure.get('Unit') == s.unit:
-                conv_factor = 1
+        cal_id = s.aget('cal_id', line)
+        doc = db.get_doc(cal_id)
+        target_pressure, unit = db.acc_todo_pressure(doc=doc, acc=target_pressure, unit=s.unit)
 
-            for v in todo_pressure.get('Value'):
-                val = float(v) * conv_factor
-                if not val in  target_pressure_values:
-                    target_pressure_values.append(val)
-       
-        else:
-            s.log.warn("calibration {} contains no target pressures".format(calid))
+    if len(target_pressure) > 0:
+        for value in target_pressure:
+            res['Target_pressure']['Select'].append({'value':value , 'display': "{} {}".format( value, s.unit) })
 
-    if len(target_pressure_values) > 0:
-        first = True
-
-        for v in sorted(target_pressure_values):
-            formated_val = '{:.1e}'.format(v) 
-            if first:
-                res['Target_pressure']['Selected'] = formated_val
-                res['Target_pressure']['Unit'] = s.unit
-                first = False
-
-            res['Target_pressure']['Select'].append({'value':formated_val , 'display': "{} {}".format( formated_val, s.unit) })
+        res['Target_pressure']['Selected'] = target_pressure[0]
+        res['Target_pressure']['Unit'] = s.unit
     else:
         msg = "no target values found"
         s.log.error(msg)

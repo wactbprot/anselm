@@ -204,7 +204,7 @@ class Anselm(System):
     
     def make_run_button(self, line):
 
-        b = QPushButton("go", self.win)
+        b = QPushButton("test selected task", self.win)
         b.setStyleSheet("background-color: lightgreen")
         b.clicked.connect(lambda: self.run_selected(b, line))
 
@@ -387,7 +387,7 @@ class Anselm(System):
         year = combo.currentText()
         self.aset('year', 0, year)
         self.log.info("select year {}".format( year ))
-    
+        self.add_widget_to_grid(self.make_add_device_button(), self.add_device_btn_line, self.add_device_btn_col) 
     def default_change(self, edit_widget, label_val, line):
         self.log.debug(label_val)
         defaults = self.dget('defaults', line)

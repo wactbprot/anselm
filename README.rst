@@ -64,6 +64,7 @@ should start with:
         root[31414] INFO                                     valves mp [ok]
         root[31414] INFO check servo mpd***********************************
         root[31414] INFO                                      servo mp [ok]
+        ...
 
 run
 ===

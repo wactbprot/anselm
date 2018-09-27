@@ -125,6 +125,10 @@ class DB(System):
         else:
             self.log.error("document with id: {} does not exist".format(id))
             return None
+    
+                          
+
+        
 
     def set_doc(self, doc):
         self.log.info("try to save document")
@@ -251,3 +255,48 @@ class DB(System):
             result['N'] = [result['N']]
 
         return result
+
+    def get_last_target_pressure(self, doc):
+        value = None
+        unit = None
+        if doc:
+            pressure = doc.get('Calibration', {}).get('Measurement', {}).get('Values', {}).get('Pressure', None)
+            if pressure:
+                for entr in pressure:
+                    ok = [
+                            'Type' in entr,
+                            entr.get('Type') == "target_pressure",
+                            'Value' in entr,
+                            isinstance(entr.get('Value'), list),
+                            'Unit' in entr,
+                            ]
+
+                    if all(ok):
+                        value = entr.get('Value')[-1]
+                        unit = entr.get('Unit')
+        
+        return value, unit
+
+    def acc_todo_pressure(self, acc, doc, unit, format_expr='{:.1e}'):
+        conv_factor = 1
+        todo_pressure = doc.get('Calibration', {}).get('ToDo',{}).get('Values',{}).get('Pressure', {})
+        ok = [
+                'Unit' in todo_pressure,
+                'Value' in todo_pressure,
+                isinstance(todo_pressure.get('Value'), list),
+                unit == "Pa",
+            ]
+
+        if all(ok):
+            if todo_pressure.get('Unit') == "mbar":
+                conv_factor = 100
+            
+
+            for v in todo_pressure.get('Value'):
+                val = format_expr.format( float(v) * conv_factor )
+                if not val in  acc:
+                    acc.append(val)
+        # sort
+        float_acc = [float(v) for v in acc]
+        acc = [format_expr.format(v) for v in sorted(float_acc)]
+        return acc, unit
