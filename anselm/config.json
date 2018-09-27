@@ -21,7 +21,8 @@
         "host": "localhost",
         "port": 8001,
         "mpd_valves_id" : "mpd-se3-valves",
-        "mpd_servo_id" : "mpd-se3-servo"
+        "mpd_servo_id" : "mpd-se3-servo",
+        "mpd_state_id" : "mpd-se3-state"
     },
     "loglevel": "DEBUG"
 }

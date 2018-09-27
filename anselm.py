@@ -37,6 +37,11 @@ class Anselm(System):
     year_col = 2
     env_col = 3
     add_device_btn_col = 4
+    
+    std_line = 1
+    year_line = 1
+    env_line = 1
+    add_device_btn_line = 1
 
     cal_id_col = 2
     fullscale_col = 3
@@ -88,7 +93,7 @@ class Anselm(System):
         self.win.closeEvent = self.closeEvent
         self.grid = QGridLayout(self.win)
 
-        self.add_widget_to_grid(self.make_std_combo(),self.current_grid_line, self.std_col)
+        self.add_widget_to_grid(self.make_std_combo(),self.std_line, self.std_col)
         self.draw_grid()
 
     def make_label_edit_pair(self, label_val, edit_val, line):
@@ -383,13 +388,14 @@ class Anselm(System):
     def std_selected(self, combo):
         standard = combo.currentText()
         self.aset('standard', 0,  standard )
-        self.add_widget_to_grid(self.make_year_combo() ,self.current_grid_line, self.year_col)
+        self.add_widget_to_grid(self.make_year_combo() ,self.year_line, self.year_col)
         self.log.info("select standard {}".format( standard))
     
     def env_selected(self, combo):
         env = combo.currentText()
         self.aset('enviroment', 0,  env )
-        self.add_widget_to_grid(self.make_add_device_button(), self.current_grid_line, self.add_device_btn_col) 
+
+        self.add_widget_to_grid(self.make_add_device_button(), self.add_device_btn_line, self.add_device_btn_col) 
         if env == "production":
             self.aset('save', 0,  "yes" )
             # ... chatbot to all on
@@ -401,7 +407,7 @@ class Anselm(System):
     def year_selected(self, combo):
         year = combo.currentText()
         self.aset('year', 0, year)
-        self.add_widget_to_grid(self.make_env_combo(),  self.current_grid_line, self.env_col)
+        self.add_widget_to_grid(self.make_env_combo(),  self.env_line, self.env_col)
         self.log.info("select year {}".format( year ))
     
     def default_change(self, edit_widget, label_val, line):

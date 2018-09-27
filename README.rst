@@ -37,8 +37,7 @@ install
     > cd /path/to/anselm
     > source bin/activate
     > pip install -e .
-    > 
-    > ./anselm.sh & ./srv.sh
+   
 
 check systems
 =============
@@ -74,8 +73,8 @@ run
     > python3 -m venv /path/to/anselm
     > cd /path/to/anselm
     > source bin/activate
-    > pip install -e .
     > 
+    > ./se3_system_check.sh 
     > ./anselm.sh & ./srv.sh
 
 curl
