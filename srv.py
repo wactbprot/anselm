@@ -13,7 +13,7 @@ db = DB()
 def home():
     return jsonify({"routes":[
                                {"route": "/cal_ids", "method":['GET']},
-                               {"route": "/next_target_pressure", "method":['GET']},
+                               {"route": "/target_pressure", "method":['GET', 'POST'],"data":['DocPath']},
                                {"route": "/dut_max","method":['GET']},
                                {"route": "/save_dut_branch","method":['POST'],"data":['DocPath']},
                                {"route": "/target_pressures","method":['GET']},
@@ -33,37 +33,66 @@ def calids():
     
     return jsonify({"ids":cal_ids })
 
-@app.route('/next_target_pressure', methods=['GET'])
-def next_target_pressure():
-    cal_ids = []
-    line = s.get_lines('cal_id')
+@app.route('/target_pressure', methods=['GET', 'POST'])
+def target_pressure():
+    if request.method == 'POST':
+        s.aset('save', 0,  "yes" )
+    
+    req = request.get_json()
+    last_pressure = 0
+    lines = s.get_lines('cal_id')
+    todo_pressures_acc = []
     for line in lines:
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
-        last_pressure = db.get_last_target_pressure(doc)
 
-        s.log.info("check calibration {}".format(cal_id))
+        todo_pressures_acc, todo_unit =  db.acc_todo_pressure(todo_pressures_acc, doc, s.unit)
+        test_pressure, test_unit = db.get_last_target_pressure(doc)
+        
+        if  test_pressure >  last_pressure and  test_unit == s.unit:
+            last_pressure = test_pressure
+       
+    for todo_pressure in  todo_pressures_acc:
+        if float(todo_pressure) > last_pressure:
+            break
+        
+    if 'DocPath' in req:
+        doc_path = req.get('DocPath')
+        for line in lines:
+            s.aset("result", line, [{'Type':'target_pressure', 'Value': float(todo_pressure), 'Unit':todo_unit}])
+            s.aset("doc_path", line, doc_path)
+            db.save_results()
+    else:
+        msg = "missing DocPath"
+        res['error'] = msg
+        s.log.error(msg)
+
+    s.aset('save', 0,  "no" )
+    s.log.info("check calibration {}".format(cal_id))
     
-    return jsonify({"ids":cal_ids })
+    return jsonify({'ToExchange':{'Target_pressure.Selected':  float(todo_pressure) }})
 
 @app.route('/save_dut_branch', methods=['POST'])
 def save_dut_branch():
-    
-    s.aset('save', 0,  "yes" )
+    if request.method == 'POST':
+        s.aset('save', 0,  "yes" )
+
     s.log.info("request and save dut branch")
     res = {"ok":True}
     req = request.get_json()
+    
     if 'DocPath' in req:
         doc_path = req.get('DocPath')
         lines = s.get_lines("cal_id")
         for line in lines:
             s.aset("result", line, [s.aget("dut_branch", line)])
             s.aset("doc_path", line, doc_path)
-        db.save_results()
+            db.save_results()
     else:
         msg = "missing DocPath"
         res['error'] = msg
         s.log.error(msg)
+
     s.aset('save', 0,  "no" )
     return jsonify(res)
 
@@ -120,7 +149,7 @@ def dut_max():
         return jsonify(res)
 
 @app.route('/target_pressures', methods=['GET'])
-def target_pressure():
+def target_pressures():
     s.log.info("request to target pressures")
   
     res = {
@@ -158,8 +187,9 @@ def target_pressure():
 
 @app.route('/offset_sequences', methods=['GET','POST'])
 def offset_sequences():
-    
-    s.aset('save', 0,  "yes" )
+    if request.method == 'POST':
+        s.aset('save', 0,  "yes" )
+
     s.log.info("request to offset sequence")
     lines = s.get_lines('offset_all_sequence')
     seq_array = []

@@ -180,21 +180,25 @@ class DB(System):
             self.log.error("line {} contains no doc_id")
 
     def save_results(self):
-        lines = self.get_lines('cal_id')
-        for line in lines:
-            doc_path = self.aget("doc_path", line)
-            results = self.dget("result", line)
-            cal_id = self.aget("cal_id", line)
-            if cal_id and doc_path and results:
-                doc = self.get_doc(cal_id)
-                self.log.debug("try to save results: {}".format(results))
-                for result in results:
-                    self.log.debug("components are cal_id {}, doc_path_array: {}, result: {} saved".format(cal_id, doc_path, result))
-                    self.doc_write_result(doc, doc_path, result)
-                    self.adelete("result", line)
-                    self.log.debug("deleted result of line {} from mem".format(line))
-                self.set_doc(doc)
-    
+        if  self.aget('save', 0) == "yes":
+
+            lines = self.get_lines('cal_id')
+            for line in lines:
+                doc_path = self.aget("doc_path", line)
+                results = self.dget("result", line)
+                cal_id = self.aget("cal_id", line)
+                if cal_id and doc_path and results:
+                    doc = self.get_doc(cal_id)
+                    self.log.debug("try to save results: {}".format(results))
+                    for result in results:
+                        self.log.debug("components are cal_id {}, doc_path_array: {}, result: {} saved".format(cal_id, doc_path, result))
+                        self.doc_write_result(doc, doc_path, result)
+                        self.adelete("result", line)
+                        self.log.debug("deleted result of line {} from mem".format(line))
+                    self.set_doc(doc)
+        else:
+            self.log.warn("save entry is not [yes]")
+
     def doc_write_result(self, doc, doc_path, result):
         #
         # last entry is something like Pressure (Type, Value and Unit) 
@@ -257,10 +261,10 @@ class DB(System):
         return result
 
     def get_last_target_pressure(self, doc):
-        value = None
-        unit = None
+        value = 0
+        unit = self.unit
         if doc:
-            pressure = doc.get('Calibration', {}).get('Measurement', {}).get('Values', {}).get('Pressure', None)
+            pressure = doc.get('Calibration', {}).get('Measurement', {}).get('Values', {}).get('Pressure')
             if pressure:
                 for entr in pressure:
                     ok = [

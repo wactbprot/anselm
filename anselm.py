@@ -158,10 +158,7 @@ class Anselm(System):
 
     def end_task(self, line):
         self.add_widget_to_grid(self.make_result_label(line = line), line, self.result_col)
-        
-        if self.aget('save', 0) == "yes":
-            self.db.save_results()
-
+        self.db.save_results()
         self.log.info("end task at line {}".format(line))
 
     def add_device_line(self):
@@ -388,6 +385,7 @@ class Anselm(System):
         self.aset('year', 0, year)
         self.log.info("select year {}".format( year ))
         self.add_widget_to_grid(self.make_add_device_button(), self.add_device_btn_line, self.add_device_btn_col) 
+        
     def default_change(self, edit_widget, label_val, line):
         self.log.debug(label_val)
         defaults = self.dget('defaults', line)

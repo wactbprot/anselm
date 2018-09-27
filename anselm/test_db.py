@@ -69,8 +69,8 @@ class TestDB(unittest.TestCase):
     def test_last_target_pressure_1(self):
         doc = {}
         v, u = self.db.get_last_target_pressure(doc)
-        self.assertEqual(v, None)
-        self.assertEqual(u, None)
+        self.assertEqual(v, 0)
+        self.assertEqual(u, 'Pa')
 
     def test_last_target_pressure_2(self):
 
