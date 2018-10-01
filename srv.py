@@ -14,10 +14,10 @@ def home():
     return jsonify({"routes":[
                                {"route": "/cal_ids", "method":['GET']},
                                {"route": "/target_pressure", "method":['GET', 'POST'],"data":['DocPath']},
-                               {"route": "/dut_max","method":['GET']},
+                               {"route": "/dut_max","method":['GET', 'POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
                                {"route": "/save_dut_branch","method":['POST'],"data":['DocPath']},
                                {"route": "/target_pressures","method":['GET']},
-                               {"route": "/offset_sequences","method":['GET','POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
+                               {"route": "/offset_sequences","method":['GET','POST'],"data":['DocPath']},
                                {"route": "/offset","method":['POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
                                {"route": "/ind","method":['POST'],"data":['Target_pressure_value', "Target_pressure_unit"]},
                             ] })
@@ -70,7 +70,7 @@ def target_pressure():
     s.aset('save', 0,  "no" )
     s.log.info("check calibration {}".format(cal_id))
     
-    return jsonify({'ToExchange':{'Target_pressure.Selected':  float(todo_pressure) }})
+    return jsonify({'ToExchange':{'Target_pressure.Selected':  float(todo_pressure) , 'Target_pressure.Unit': todo_unit }})
 
 @app.route('/save_dut_branch', methods=['POST'])
 def save_dut_branch():
@@ -96,28 +96,43 @@ def save_dut_branch():
     s.aset('save', 0,  "no" )
     return jsonify(res)
 
-@app.route('/dut_max', methods=['GET'])
+@app.route('/dut_max', methods=['GET', 'POST'])
 def dut_max():
     s.log.info("request max values for dut branch")
+    if request.method == 'POST':
+        s.aset('save', 0,  "yes" )
+        req = request.get_json()
+        s.log.debug("receive request with body {}".format(req))
     
+    if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
+        target_value = float(req.get('Target_pressure_value'))
+        target_unit = req.get('Target_pressure_unit')
+    else:
+         target_value = 0
+         target_unit = "Pa"
+           
     res =   {
-             "Dut_A": {
+            "Dut_A": {
                      "Value": 0.0,
                      "Type": "dut_max_a",
                      "Unit": s.unit
                  },
-             "Dut_B": {
+            "Dut_B": {
                      "Value": 0.0,
                      "Type": "dut_max_b",
                      "Unit": s.unit
                  },
-             "Dut_C": {
+            "Dut_C": {
                      "Value": 0.0,
                      "Type": "dut_max_c",
                      "Unit": s.unit
-                 }
-             }
+                 },
+            "Set_Dut_A": "open",
+            "Set_Dut_B": "open",
+            "Set_Dut_C": "open"
+            }
     lines = s.get_lines('cal_id')
+    # loop over all devices on every branch
     for line in lines:
         fullscale_value = s.fget("fullscale_value", line)
         fullscale_unit = s.aget("fullscale_unit", line)        
@@ -142,6 +157,22 @@ def dut_max():
             res['error'] = msg
             s.log.error(msg)
             break
+
+    if not 'error' in res and request.method == 'POST' and target_value > 0 and fullscale_unit == target_unit:
+        if  target_value > res['Dut_A']['Value']:
+            res['Set_Dut_A'] = "close"
+        else:
+            res['Set_Dut_A'] = "open"
+        
+        if  target_value > res['Dut_B']['Value']:
+            res['Set_Dut_B'] = "close"
+        else:
+            res['Set_Dut_B'] = "open"
+        
+        if  target_value > res['Dut_C']['Value']:
+            res['Set_Dut_C'] = "close"
+        else:
+            res['Set_Dut_C'] = "open"
 
     if not 'error' in res:
         return jsonify({'ToExchange':res})

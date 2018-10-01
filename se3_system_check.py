@@ -36,6 +36,18 @@ def main():
     else:
         log.error("{:>50}".format("relayServer [fail]"))
         sys.exit("start relay server")
+    
+    # check ppc4
+    log.info("{:*<50}".format("check ppc4 (unit Pa)"))
+    data = {'Action': 'TCP', "Host": "e75443", "Port":"5302", "Value":"UNIT\r"}
+    req = requests.post("http://{}:{}".format(relay.get("host"), relay.get("port")), data=json.dumps(data))
+    res = req.json()
+    
+    if "Result" in res and res['Result'] == "Pa  a\r\n":  
+        log.info("{:>50}".format("ppc4 [ok]"))
+    else:
+        log.error("{:>50}".format("ppc4 [fail]"))
+        sys.exit("check PPC4 rs232, port 3 at e75443, check unit Pa")
 
     # check p_fill modbus/CDGs
     log.info("{:*<50}".format("check filling pressure CDGs"))
