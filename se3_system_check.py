@@ -32,7 +32,7 @@ def main():
     req = requests.post("http://{}:{}".format(relay.get("host"), relay.get("port")), data=json.dumps(data))
     res = req.json()
     if 'Result' in res:
-        log.info("{:>50}".format("relayServer [ok]"))
+        log.info("{:>50}".format("relayServer ({}) [ok]".format(res.get('Result'))))
     else:
         log.error("{:>50}".format("relayServer [fail]"))
         sys.exit("start relay server")
