@@ -29,16 +29,22 @@ class Anselm(System):
     std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
     year_select = ["2019", "2018", "2017"]
     dut_branches = ["dut_a", "dut_b", "dut_c"]
-   
+    maintainer_select = ["Ute Becker", "Thomas Bock", "Christian Buchmann"]
+    gas_select = ["N2", "Ar", "He", ]
+
     mult_line_height = 4
     current_grid_line = 1
 
     std_col = 1
     year_col = 2
-    add_device_btn_col = 3
+    maintainer_col = 3
+    gas_col = 4
+    add_device_btn_col = 5
     
     std_line = 1
     year_line = 1
+    maintainer_line = 1
+    gas_line =1
     add_device_btn_line = 1
 
     cal_id_col = 2
@@ -115,6 +121,20 @@ class Anselm(System):
         c = self.make_combo(self.std_select, first_item="select primary standard", last_item=False)
         c.setFixedSize(self.long_line, self.line_heigth)
         c.currentIndexChanged.connect(lambda: self.std_selected(c))
+
+        return c
+    
+    def make_gas_combo(self):
+        c = self.make_combo(self.gas_select, first_item="select measurement gas", last_item=False)
+        c.setFixedSize(self.long_line, self.line_heigth)
+        c.currentIndexChanged.connect(lambda: self.gas_selected(c))
+
+        return c
+    
+    def make_maintainer_combo(self):
+        c = self.make_combo(self.maintainer_select, first_item="select maintainer", last_item=False)
+        c.setFixedSize(self.long_line, self.line_heigth)
+        c.currentIndexChanged.connect(lambda: self.maintainer_selected(c))
 
         return c
 
@@ -283,6 +303,8 @@ class Anselm(System):
         offset_all_sequence = []
         auto_init_tasks = []
         auto_offset_tasks = []
+        offset_tasks = []
+        ind_tasks = []
 
         res = True
         for task in tasks:
@@ -298,11 +320,12 @@ class Anselm(System):
             if  task_name.startswith('auto_offset_'):        
                 auto_offset_tasks.append(task)
            
-            if task_name == 'offset':
-                self.aset('offset_task', line, task)
+            if task_name.startswith('offset'):
+                offset_tasks.append(task)
            
-            if task_name == 'ind':
-                self.aset('ind_task', line, task)
+            if task_name.startswith('ind'):
+                ind_tasks.append(task)
+               
         
         for init_task in auto_init_tasks:
             sufix = init_task.get('TaskName').replace("auto_init_", "")
@@ -314,7 +337,15 @@ class Anselm(System):
 
        
         self.aset("offset_all_sequence", line, offset_all_sequence)
+        self.log.debug("offset_all_sequence is: {}".format(offset_all_sequence))
         self.aset("auto_init_tasks", line, auto_init_tasks)
+        self.log.debug("auto_init_sequence is: {}".format(offset_all_sequence))
+
+        self.aset("offset_tasks", line, offset_tasks)
+        self.log.debug("offset_tasks are: {}".format(offset_tasks))
+        self.aset("ind_tasks", line, ind_tasks)
+        self.log.debug("ind_tasks: {}".format(ind_tasks))
+
         return res
 
     def run_selected(self, combo, line):
@@ -378,13 +409,25 @@ class Anselm(System):
         standard = combo.currentText()
         self.aset('standard', 0,  standard )
         self.add_widget_to_grid(self.make_year_combo() ,self.year_line, self.year_col)
+        self.add_widget_to_grid(self.make_maintainer_combo() ,self.maintainer_line, self.maintainer_col)
+        self.add_widget_to_grid(self.make_gas_combo() ,self.gas_line, self.gas_col)
         self.log.info("select standard {}".format( standard))
     
+    def maintainer_selected(self, combo):
+        maintainer = combo.currentText()
+        self.aset('maintainer', 0,  maintainer )
+        self.log.info("select maintainer {}".format( maintainer))
+   
+    def gas_selected(self, combo):
+        gas = combo.currentText()
+        self.aset('gas', 0,  gas )
+        self.log.info("select gas {}".format( gas))
+        self.add_widget_to_grid(self.make_add_device_button(), self.add_device_btn_line, self.add_device_btn_col) 
+
     def year_selected(self, combo):
         year = combo.currentText()
         self.aset('year', 0, year)
         self.log.info("select year {}".format( year ))
-        self.add_widget_to_grid(self.make_add_device_button(), self.add_device_btn_line, self.add_device_btn_col) 
         
     def default_change(self, edit_widget, label_val, line):
         self.log.debug(label_val)
