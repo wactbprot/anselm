@@ -7,7 +7,7 @@ from anselm.worker import Worker # pylint: disable=E0611
 from PyQt5.QtWidgets import QWidget, QDesktopWidget, QApplication, QPushButton
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QPlainTextEdit, QLabel, QLineEdit
 from PyQt5.QtCore import QThread, pyqtSignal , Qt
-
+from slackclient import SlackClient
 
 class Observe(QThread, System):
     signal = pyqtSignal('PyQt_PyObject')
@@ -25,7 +25,17 @@ class Observe(QThread, System):
 
 
 class Anselm(System):
-    
+    # instantiate Slack client
+    slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+    # starterbot's user ID in Slack: value is assigned after the bot starts up
+    starterbot_id = None
+
+    # constants
+    RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
+    EXAMPLE_COMMAND = "do"
+    MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+
+
     std_select = ["SE3", "CE3", "FRS5", "DKM_PPC4"]
     year_select = ["2019", "2018", "2017"]
     dut_branches = ["dut_a", "dut_b", "dut_c"]
