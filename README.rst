@@ -37,8 +37,7 @@ install
     > cd /path/to/anselm
     > source bin/activate
     > pip install -e .
-    > 
-    > ./anselm.sh & ./srv.sh
+   
 
 check systems
 =============
@@ -65,6 +64,7 @@ should start with:
         root[31414] INFO                                     valves mp [ok]
         root[31414] INFO check servo mpd***********************************
         root[31414] INFO                                      servo mp [ok]
+        ...
 
 run
 ===
@@ -74,8 +74,8 @@ run
     > python3 -m venv /path/to/anselm
     > cd /path/to/anselm
     > source bin/activate
-    > pip install -e .
     > 
+    > ./se3_system_check.sh 
     > ./anselm.sh & ./srv.sh
 
 curl
