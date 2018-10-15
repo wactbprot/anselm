@@ -66,12 +66,3 @@ class Worker(System):
         time.sleep(5)
         self.aset('result', line,  [{'completed':True}], expire=True)
         self.r.publish('io', line)
-
-
-
-
-
-
-
-
-

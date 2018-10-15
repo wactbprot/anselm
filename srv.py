@@ -26,7 +26,7 @@ def home():
 
 @app.route('/cal_ids', methods=['GET'])
 def calids():
-    msg = "http request to endpoint /cal_ids"
+    msg = "http request to endpoint */cal_ids*"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
@@ -41,7 +41,7 @@ def calids():
 
 @app.route('/target_pressure', methods=['GET', 'POST'])
 def target_pressure():
-    msg = "http request to /target_pressure endpoint"
+    msg = "http request to */target_pressure* endpoint"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
@@ -84,14 +84,13 @@ def target_pressure():
 
 @app.route('/save_dut_branch', methods=['POST'])
 def save_dut_branch():
-    msg = "http  request to endpoint /save_dut_branch"
+    msg = "http  request to endpoint */save_dut_branch*"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
     if request.method == 'POST':
         s.aset('save', 0,  "yes" )
 
-    s.log.info("request and save dut branch")
     res = {"ok":True}
     req = request.get_json()
     
@@ -112,7 +111,7 @@ def save_dut_branch():
 
 @app.route('/save_maintainer', methods=['POST'])
 def save_maintainer():
-    msg = "http request to endpoint /save_maintainer"
+    msg = "http request to endpoint */save_maintainer*"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
@@ -142,7 +141,7 @@ def save_maintainer():
 
 @app.route('/save_gas', methods=['POST'])
 def save_gas():
-    msg = "request to endpoint /save_gas"
+    msg = "http request to endpoint */save_gas*"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
@@ -173,7 +172,7 @@ def save_gas():
 
 @app.route('/dut_max', methods=['GET', 'POST'])
 def dut_max():
-    msg = "http request to endpoint /dut_max"
+    msg = "http request to endpoint */dut_max*"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
@@ -270,7 +269,7 @@ def dut_max():
 
 @app.route('/target_pressures', methods=['GET'])
 def target_pressures():
-    msg = "http request to endpoint /target_pressures"
+    msg = "http request to endpoint */target_pressures*"
     s.log.info(msg) 
     s.r.publish('info', msg)
    
@@ -309,7 +308,7 @@ def target_pressures():
 
 @app.route('/offset_sequences', methods=['GET','POST'])
 def offset_sequences():
-    msg = "request to endpoint /offset_sequences"
+    msg = "http request to endpoint */offset_sequences*"
     s.log.info(msg) 
     s.r.publish('info', msg)
    
@@ -334,7 +333,7 @@ def offset_sequences():
 
 @app.route('/offset', methods=['POST'])
 def offset():
-    msg = "request to endpoint /offset"
+    msg = "http request to endpoint */offset*"
     s.log.info(msg) 
     s.r.publish('info', msg)
 
@@ -391,7 +390,7 @@ def offset():
 
 @app.route('/ind', methods=['POST'])
 def ind():
-    msg = "request to endpoint /ind"
+    msg = "http request to endpoint */ind*"
     s.log.info(msg) 
     s.r.publish('info', msg)
     s.aset('save', 0,  "yes" )
