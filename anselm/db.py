@@ -1,6 +1,7 @@
 from anselm.system import System
 import couchdb
 import json
+import sys
 
 class DB(System):
 
@@ -15,11 +16,16 @@ class DB(System):
         port = db_dict.get('port')
         host = db_dict.get('host')
         url = 'http://{}:{}/'.format(host, port)
-
         self.db_dict = db_dict
-        self.db_srv = couchdb.Server(url)
-        self.db = self.db_srv[self.db_dict['database']]
-        self.log.info("database  ok")
+        db_name = self.db_dict['database']
+        try:
+            self.db_srv = couchdb.Server(url)
+            self.db = self.db_srv[db_name]
+            self.log.info("database  ok")
+        except Exception as inst:
+            msg = "database problem, check for {}{}".format(url, db_name)
+            self.log.error(msg)
+            sys.exit(msg)
 
     def store_doc(self, doc):
         id = doc.get('_id')
