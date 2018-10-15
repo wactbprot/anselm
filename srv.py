@@ -31,9 +31,9 @@ def calids():
     for key in keys:
         cal_ids.append(s.r.get(key))
 
-    s.log.info("request cal ids")
-    
-    return jsonify({"ids":cal_ids })
+    s.log.info("request cal ids and Exchange")
+
+    return jsonify({"ids":cal_ids, 'ToExchange':{"Ids": ";".join(cal_ids)}})
 
 @app.route('/target_pressure', methods=['GET', 'POST'])
 def target_pressure():
@@ -294,6 +294,7 @@ def offset_sequences():
     seq_array = []
     for line in lines:
         sequence = s.dget('offset_all_sequence', line)
+         
         for task in sequence:
             seq_array.append("{}-{}".format(task.get('TaskName'), line)) 
 
@@ -328,23 +329,24 @@ def offset():
                 if target_value < fullscale_value:
                     offset_sequence = []
                     
-                    auto_init_task = select_task(target_value, target_unit, s.dget('auto_init_tasks', line))
+                    auto_init_task = select_task(target_value, s.dget('auto_init_tasks', line))
                     if auto_init_task is not None:
                         seq_array.append("{}-{}".format(auto_init_task.get('TaskName'), line))
                         offset_sequence.append(auto_init_task)
 
-                    offset_task = select_task(target_value, target_unit, s.dget('offset_tasks', line))
+                    offset_task = select_task(target_value,  s.dget('offset_tasks', line))
                     if offset_task is not None:
                         seq_array.append("{}-{}".format(offset_task.get('TaskName'), line))
-                        offset_sequence.append(auto_init_task)
+                        offset_sequence.append(offset_task)
                     
                     
                 if len(offset_sequence) >0:
                     start_new_thread( work_seqence, (offset_sequence, line,))
-                    res = wait_sequences_complete(seq_array)
                 else:
                     s.log.info("No task match for line {}".format(line))
                     s.log.info("nothing started")
+
+            res = wait_sequences_complete(seq_array)
         else:
             msg = "wrong target unit"
             s.log.error(msg)
@@ -381,23 +383,23 @@ def ind():
                 if target_value < fullscale_value:
                     ind_sequence = []
                     
-                    auto_init_task = select_task(target_value, target_unit, s.dget('auto_init_tasks', line))
+                    auto_init_task = select_task(target_value, s.dget('auto_init_tasks', line))
                     if auto_init_task is not None:
                         seq_array.append("{}-{}".format(auto_init_task.get('TaskName'), line))
                         ind_sequence.append(auto_init_task)
 
-                    ind_task = select_task(target_value, target_unit, s.dget('ind_tasks', line))
+                    ind_task = select_task(target_value, s.dget('ind_tasks', line))
                     if ind_task is not None:
                         seq_array.append("{}-{}".format(ind_task.get('TaskName'), line))
-                        ind_sequence.append(auto_init_task)
+                        ind_sequence.append(ind_task)
                     
                     
                 if len(ind_sequence) >0:
                     start_new_thread( work_seqence, (ind_sequence, line,))
-                    res = wait_sequences_complete(seq_array)
                 else:
                     s.log.info("No task match for line {}".format(line))
                     s.log.info("nothing started")
+            res = wait_sequences_complete(seq_array)
         else:
             msg = "wrong target unit"
             s.log.error(msg)
