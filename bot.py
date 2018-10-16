@@ -51,26 +51,40 @@ class Bot(System):
     
     def handle_command(self, command, channel):
 
-        default_response = "Not sure what you mean.\n Try *gas?* or *calids?*."
-        response = None
+        ok = False
 
-        if command == 'gas?':
-            response = "calibration gas is {}".format(self.aget('gas',0))
+        if command.startswith('ga'):
+            ok = True
+            self.post(channel, "calibration gas is {}".format(self.aget('gas',0)))
 
-        if command == "calids?":
-            ids =""
+        if command.startswith('id'):
+            ok = True
+            self.post(channel, "doc ids are:")
             lines = self.get_lines("cal_id")
             for line in lines:   
-                ids += self.aget("cal_id", line)
+                self.post(channel, self.aget("cal_id", line))
+        
+        if command.startswith('fu'):
+            ok = True
+            self.post(channel, "fullscale of the devices are:")
+            lines = self.get_lines("fullscale_value")
+            for line in lines:   
+                self.post(channel, "{} {} ".format(self.aget("fullscale_value", line), self.aget("fullscale_unit", line)))
 
-            response = "documet ids are {}".format(ids)
-       
+        if command.startswith('he'):
+            ok = True
+            self.post(channel,  "Available command are *he[lp]* *ga[s]*, *fu[llscales]* or *id[s]*.")
+
+        if not ok:
+            self.post(channel, "Not sure what you mean. Try *help* command.")
+        
+    def post(self, channel, msg):
+        
         self.slack_client.api_call(
             "chat.postMessage",
-            channel=self.info_channel_id,
-            text=response or default_response
+            channel=channel,
+            text=msg
         )
-
 
     def msg_in(self):
         self.log.debug("message in")
@@ -93,7 +107,7 @@ class Bot(System):
                          "chat.postMessage",
                         channel=self.info_channel_id,
                         text=item.get('data')
-                            )
+                        )
         else:
             self.log.error("got no info channel id")
 
