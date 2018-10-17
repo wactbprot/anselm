@@ -52,24 +52,49 @@ def target_pressure():
     last_pressure = 0
     lines = s.get_lines('cal_id')
     todo_pressures_acc = []
+    repeat_over_rating = 7.0
+    highest_rating = 0 # start value
     for line in lines:
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
 
         todo_pressures_acc, todo_unit =  db.acc_todo_pressure(todo_pressures_acc, doc, s.unit)
         test_pressure, test_unit = db.get_last_target_pressure(doc)
+
+        last_rating = db.get_last_rating(doc)
+        if last_rating > highest_rating:
+            highest_rating = last_rating
         
         if  test_pressure >  last_pressure and  test_unit == s.unit:
             last_pressure = test_pressure
-       
-    for todo_pressure in  todo_pressures_acc:
-        if float(todo_pressure) > last_pressure:
-            break
+            last_unit = test_unit
+
+
+    # let's find next pressure
+    if highest_rating < repeat_over_rating:
+        for todo_pressure in  todo_pressures_acc:
+            if float(todo_pressure) > last_pressure:
+                break
         
+        # next pressure with ok rating
+        next_pressure, next_unit = todo_pressure, todo_unit
+
+        s.r.publish('info', """
+        last measurement point has a rating of: *{}*. This is ok. Next pressure point will be *{} {}*
+        """.format(highest_rating, todo_pressure, todo_unit))
+    
+    if  highest_rating > repeat_over_rating:
+        s.r.publish('info', """
+        last measurement point has a rating of *{}*. This is *not ok*. Repeat last pressure point *{} {}*
+        """.format(highest_rating, todo_pressure, todo_unit))
+        
+        # next pressure with ok rating not ok
+        next_pressure, next_unit = last_pressure, last_unit
+
     if 'DocPath' in req:
         doc_path = req.get('DocPath')
         for line in lines:
-            s.aset("result", line, [{'Type':'target_pressure', 'Value': float(todo_pressure), 'Unit':todo_unit}])
+            s.aset("result", line, [{'Type':'target_pressure', 'Value': float(next_pressure), 'Unit':next_unit}])
             s.aset("doc_path", line, doc_path)
             db.save_results()
     else:
@@ -80,7 +105,7 @@ def target_pressure():
     s.aset('save', 0,  "no" )
     s.log.info("check calibration {}".format(cal_id))
     
-    return jsonify({'ToExchange':{'Target_pressure.Selected':  float(todo_pressure) , 'Target_pressure.Unit': todo_unit }})
+    return jsonify({'ToExchange':{'Target_pressure.Selected':  float(next_pressure) , 'Target_pressure.Unit': next_unit }})
 
 @app.route('/save_dut_branch', methods=['POST'])
 def save_dut_branch():

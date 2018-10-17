@@ -131,10 +131,6 @@ class DB(System):
         else:
             self.log.error("document with id: {} does not exist".format(id))
             return None
-    
-                          
-
-        
 
     def set_doc(self, doc):
         self.log.info("try to save document")
@@ -267,6 +263,25 @@ class DB(System):
             result['N'] = [result['N']]
 
         return result
+
+    def get_last_rating(self, doc):
+        rating = 0
+        if doc:
+            ok = [doc,
+                'Calibration' in doc,
+                'Check' in doc['Calibration'],
+                'Values' in doc['Calibration']['Check']
+                ]
+            if all(ok):
+                rating = []
+                check_dicts = doc['Calibration']['Check']['Values']
+                for quant in check_dicts:
+                    for entr in check_dicts[quant]:
+                        rating.append(entr['Rating'][-1])
+
+
+        return sum(rating)/len(rating)
+
 
     def get_last_target_pressure(self, doc):
         value = 0

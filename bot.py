@@ -73,7 +73,7 @@ class Bot(System):
 
         if command.startswith('he'):
             ok = True
-            self.post(channel,  "Available command are *he[lp]* *ga[s]*, *fu[llscales]* or *id[s]*.")
+            self.post(channel,  "Available commands are *he[lp]* *ga[s]*, *fu[llscales]* or *id[s]*.")
 
         if not ok:
             self.post(channel, "Not sure what you mean. Try *help* command.")
