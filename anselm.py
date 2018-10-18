@@ -349,7 +349,7 @@ class Anselm(System):
         return res
 
     def run_selected(self, combo, line):
-        self.aset('save', 0,  "no" )
+        self.aset('save', line,  "no" )
         self.log.info("set save to [no]")
         self.run_task(line)
     

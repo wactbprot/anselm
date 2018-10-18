@@ -182,10 +182,10 @@ class DB(System):
             self.log.error("line {} contains no doc_id")
 
     def save_results(self):
-        if  self.aget('save', 0) == "yes":
+        lines = self.get_lines('cal_id')
+        for line in lines:
+            if  self.aget('save', line) == "yes":
 
-            lines = self.get_lines('cal_id')
-            for line in lines:
                 doc_path = self.aget("doc_path", line)
                 results = self.dget("result", line)
                 cal_id = self.aget("cal_id", line)
@@ -198,8 +198,9 @@ class DB(System):
                         self.adelete("result", line)
                         self.log.debug("deleted result of line {} from mem".format(line))
                     self.set_doc(doc)
-        else:
-            self.log.warn("save entry is not [yes]")
+               
+            else:
+                self.log.warn("save entry at line {} is not [yes]".format(line))
 
     def doc_write_result(self, doc, doc_path, result):
         #
@@ -265,23 +266,16 @@ class DB(System):
         return result
 
     def get_last_rating(self, doc):
-        rating = 0
+        rating = [0]
         if doc:
-            ok = [doc,
-                'Calibration' in doc,
-                'Check' in doc['Calibration'],
-                'Values' in doc['Calibration']['Check']
-                ]
-            if all(ok):
-                rating = []
-                check_dicts = doc['Calibration']['Check']['Values']
+            check_dicts = doc.get('Calibration',{}).get('Check',{}).get('Values')
+            if check_dicts:
                 for quant in check_dicts:
                     for entr in check_dicts[quant]:
                         rating.append(entr['Rating'][-1])
-
-
-        return sum(rating)/len(rating)
-
+                return sum(rating)/len(rating)
+            else:
+                return None
 
     def get_last_target_pressure(self, doc):
         value = 0
@@ -302,7 +296,7 @@ class DB(System):
                         value = entr.get('Value')[-1]
                         unit = entr.get('Unit')
         
-        return value, unit
+        return float(value), unit
 
     def acc_todo_pressure(self, acc, doc, unit, format_expr='{:.1e}'):
         conv_factor = 1

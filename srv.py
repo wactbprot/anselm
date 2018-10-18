@@ -45,9 +45,6 @@ def target_pressure():
     s.log.info(msg) 
     s.r.publish('info', msg)
 
-    if request.method == 'POST':
-        s.aset('save', 0,  "yes" )
-    
     req = request.get_json()
     last_pressure = 0
     lines = s.get_lines('cal_id')
@@ -58,6 +55,7 @@ def target_pressure():
     highest_rating = 0 # start value
 
     for line in lines:
+        
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
 
@@ -65,7 +63,7 @@ def target_pressure():
         test_pressure, test_unit = db.get_last_target_pressure(doc)
 
         last_rating = db.get_last_rating(doc)
-        if last_rating > highest_rating:
+        if last_rating and last_rating > highest_rating:
             highest_rating = last_rating
         
         if  test_pressure >  last_pressure and  test_unit == s.unit:
@@ -79,7 +77,7 @@ def target_pressure():
 
     point_no = todo_pressures_acc.index(todo_pressure) + 1
     points_total = len(todo_pressures_acc)
-    measurement_complete = last_pressure/float(todo_pressures_acc[-1]) -1 < epsilon
+    measurement_complete = last_pressure > 0 and last_pressure/float(todo_pressures_acc[-1]) -1 < epsilon
 
     if highest_rating < repeat_over_rating:
         
@@ -105,9 +103,13 @@ def target_pressure():
         s.r.publish('info', "Repeat the last pressure point (No.: {} of {} in total) *{} {}*.".format(point_no, points_total,  next_pressure, next_unit))
     
     if continue_measurement:  
+        s.aset("current_target_pressure", 0, "{} {}".format(next_pressure, next_unit))
         if 'DocPath' in req:
             doc_path = req.get('DocPath')
             for line in lines:
+                if request.method == 'POST':
+                    s.aset('save', line,  "yes" )
+
                 s.aset("result", line, [{'Type':'target_pressure', 'Value': float(next_pressure), 'Unit':next_unit}])
                 s.aset("doc_path", line, doc_path)
                 db.save_results()
@@ -116,7 +118,7 @@ def target_pressure():
             res['error'] = msg
             s.log.error(msg)
 
-        s.aset('save', 0,  "no" )
+       
         return jsonify({'ToExchange':{'Target_pressure.Selected':  float(next_pressure) , 'Target_pressure.Unit': next_unit , 'Continue_mesaurement.Bool': continue_measurement}})
     else:
         return jsonify({'ToExchange':{'Continue_mesaurement.Bool': continue_measurement}})   
@@ -127,9 +129,6 @@ def save_dut_branch():
     s.log.info(msg) 
     s.r.publish('info', msg)
 
-    if request.method == 'POST':
-        s.aset('save', 0,  "yes" )
-
     res = {"ok":True}
     req = request.get_json()
     
@@ -137,15 +136,19 @@ def save_dut_branch():
         doc_path = req.get('DocPath')
         lines = s.get_lines("cal_id")
         for line in lines:
+            if request.method == 'POST':
+                s.aset('save', line,  "yes" )
+            
             s.aset("result", line, [s.aget("dut_branch", line)])
             s.aset("doc_path", line, doc_path)
             db.save_results()
+
     else:
         msg = "missing DocPath"
         res['error'] = msg
         s.log.error(msg)
 
-    s.aset('save', 0,  "no" )
+  
     return jsonify(res)
 
 @app.route('/save_maintainer', methods=['POST'])
@@ -154,9 +157,6 @@ def save_maintainer():
     s.log.info(msg) 
     s.r.publish('info', msg)
 
-    if request.method == 'POST':
-        s.aset('save', 0,  "yes" )
-
     res = {"ok":True}
     req = request.get_json()
     
@@ -164,6 +164,9 @@ def save_maintainer():
         doc_path = req.get('DocPath')
         lines = s.get_lines("cal_id")
         for line in lines:
+            if request.method == 'POST':
+                s.aset('save', line,  "yes" )
+            
             s.aset("result", line, [s.aget("maintainer", 0)])
             s.aset("doc_path", line, doc_path)
             db.save_results()
@@ -172,7 +175,6 @@ def save_maintainer():
         res['error'] = msg
         s.log.error(msg)
 
-    s.aset('save', 0,  "no" )
     if not 'error' in res:
         return jsonify({'ToExchange':{'Maintainer': s.aget("maintainer", 0)}})
     else:
@@ -184,9 +186,6 @@ def save_gas():
     s.log.info(msg) 
     s.r.publish('info', msg)
 
-    if request.method == 'POST':
-        s.aset('save', 0,  "yes" )
-
     res = {"ok":True}
     req = request.get_json()
     
@@ -194,6 +193,9 @@ def save_gas():
         doc_path = req.get('DocPath')
         lines = s.get_lines("cal_id")
         for line in lines:
+            if request.method == 'POST':
+                s.aset('save', line,  "yes" )
+
             s.aset("result", line, [s.aget("gas", 0)])
             s.aset("doc_path", line, doc_path)
             db.save_results()
@@ -202,7 +204,6 @@ def save_gas():
         res['error'] = msg
         s.log.error(msg)
 
-    s.aset('save', 0,  "no" )
     if not 'error' in res:
         return jsonify({'ToExchange':{'Gas': s.aget("gas", 0)}})
     else:
@@ -214,12 +215,8 @@ def dut_max():
     msg = "http request to endpoint */dut_max*"
     s.log.info(msg) 
     s.r.publish('info', msg)
-
-    if request.method == 'POST':
-        s.aset('save', 0,  "yes" )
-        req = request.get_json()
-        s.log.debug("receive request with body {}".format(req))
-    
+    req = request.get_json()
+   
     if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
         target_value = float(req.get('Target_pressure_value'))
         target_unit = req.get('Target_pressure_unit')
@@ -247,9 +244,10 @@ def dut_max():
             "Set_Dut_B": "close",
             "Set_Dut_C": "close"
             }
-    lines = s.get_lines('cal_id')
     # loop over all devices on every branch
+    lines = s.get_lines('cal_id')
     for line in lines:
+
         fullscale_value = s.fget("fullscale_value", line)
         fullscale_unit = s.aget("fullscale_unit", line)        
         dut_branch = s.aget("dut_branch", line)
@@ -294,6 +292,9 @@ def dut_max():
         doc_path = req.get('DocPath')
         lines = s.get_lines("cal_id")
         for line in lines:
+            if request.method == 'POST':
+                s.aset('save', line,  "yes" )
+            
             s.aset("result", line, [{'Type':'dut_a',  'Value':res['Set_Dut_A']}, 
                                     {'Type':'dut_b',  'Value':res['Set_Dut_B']}, 
                                     {'Type':'dut_c',  'Value':res['Set_Dut_C']}])
@@ -350,14 +351,16 @@ def offset_sequences():
     msg = "http request to endpoint */offset_sequences*"
     s.log.info(msg) 
     s.r.publish('info', msg)
-   
-    if request.method == 'POST':
-        s.aset('save', 0,  "yes" )
-
-    s.log.info("request to offset sequence")
-    lines = s.get_lines('offset_all_sequence')
+    
     seq_array = []
+   
+    lines = s.get_lines('offset_all_sequence')
     for line in lines:
+        if request.method == 'POST':
+            s.aset('save', line,  "yes" )
+            s.log.debug("set save at line {} to yes".format(line))
+
+        
         sequence = s.dget('offset_all_sequence', line)
          
         for task in sequence:
@@ -375,12 +378,8 @@ def offset():
     msg = "http request to endpoint */offset*"
     s.log.info(msg) 
     s.r.publish('info', msg)
-
-    s.aset('save', 0,  "yes" )
     res = {"ok":True}
     req = request.get_json()
-
-    s.log.debug("receive request with body {}".format(req))
 
     if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
         seq_array = []
@@ -391,6 +390,9 @@ def offset():
 
             lines = s.get_lines('fullscale_value')
             for line in lines:
+                if request.method == 'POST':
+                    s.aset('save', line,  "yes" )
+
                 fullscale_value = s.fget('fullscale_value', line)
                 s.log.debug("fullscale value for line {} is {}. Target value is: {}.".format(line, fullscale_value, target_value))
 
@@ -432,11 +434,9 @@ def ind():
     msg = "http request to endpoint */ind*"
     s.log.info(msg) 
     s.r.publish('info', msg)
-    s.aset('save', 0,  "yes" )
+  
     res = {"ok":True}
     req = request.get_json()
-
-    s.log.debug("receive request with body {}".format(req))
 
     if 'Target_pressure_value' in req and 'Target_pressure_unit' in req:
         seq_array = []
@@ -447,6 +447,9 @@ def ind():
 
             lines = s.get_lines('fullscale_value')
             for line in lines:
+                if request.method == 'POST':
+                    s.aset('save', line,  "yes" )
+
                 fullscale_value = s.fget('fullscale_value', line)
                 s.log.debug("fullscale value for line {} is {}. Target value is: {}.".format(line, fullscale_value, target_value))
 
@@ -469,6 +472,7 @@ def ind():
                 else:
                     s.log.info("No task match for line {}".format(line))
                     s.log.info("nothing started")
+                
             res = wait_sequences_complete(seq_array)
         else:
             msg = "wrong target unit"
