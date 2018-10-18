@@ -53,7 +53,10 @@ def target_pressure():
     lines = s.get_lines('cal_id')
     todo_pressures_acc = []
     repeat_over_rating = 7.0
+    continue_measurement = True
+    epsilon = 0.01
     highest_rating = 0 # start value
+
     for line in lines:
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
@@ -70,42 +73,53 @@ def target_pressure():
             last_unit = test_unit
 
 
-    # let's find next pressure
-    if highest_rating < repeat_over_rating:
-        for todo_pressure in  todo_pressures_acc:
+    for todo_pressure in  todo_pressures_acc:
             if float(todo_pressure) > last_pressure:
                 break
-        
-        # next pressure with ok rating
-        next_pressure, next_unit = todo_pressure, todo_unit
 
-        s.r.publish('info', """
-        last measurement point has a rating of: *{}*. This is ok. Next pressure point will be *{} {}*
-        """.format(highest_rating, todo_pressure, todo_unit))
-    
-    if  highest_rating > repeat_over_rating:
-        s.r.publish('info', """
-        last measurement point has a rating of *{}*. This is *not ok*. Repeat last pressure point *{} {}*
-        """.format(highest_rating, todo_pressure, todo_unit))
+    point_no = todo_pressures_acc.index(todo_pressure) + 1
+    points_total = len(todo_pressures_acc)
+    measurement_complete = last_pressure/float(todo_pressures_acc[-1]) -1 < epsilon
+
+    if highest_rating < repeat_over_rating:
         
+        if not measurement_complete:
+            continue_measurement = True
+            # next pressure with ok rating
+            next_pressure, next_unit = todo_pressure, todo_unit
+
+            s.r.publish('info', "The last measurement point has a rating of *{}* of [0..9]. This is ok.".format(highest_rating))
+            s.r.publish('info', "Next pressure point (No.: {} of {} in total) will be *{} {}*".format(point_no+1, points_total,  next_pressure, next_unit))
+        else:
+            continue_measurement = False
+            s.r.publish('info', "The last measurement point has a rating of *{}* of [0..9]. This is ok.".format(highest_rating))
+            s.r.publish('info', "It was the *last measurement point*.")
+
+    if  highest_rating > repeat_over_rating:
+        continue_measurement = True
+
         # next pressure with ok rating not ok
         next_pressure, next_unit = last_pressure, last_unit
 
-    if 'DocPath' in req:
-        doc_path = req.get('DocPath')
-        for line in lines:
-            s.aset("result", line, [{'Type':'target_pressure', 'Value': float(next_pressure), 'Unit':next_unit}])
-            s.aset("doc_path", line, doc_path)
-            db.save_results()
-    else:
-        msg = "missing DocPath"
-        res['error'] = msg
-        s.log.error(msg)
-
-    s.aset('save', 0,  "no" )
-    s.log.info("check calibration {}".format(cal_id))
+        s.r.publish('info', "The last measurement point has a rating of *{}*. This is *not ok*.".format(highest_rating))
+        s.r.publish('info', "Repeat the last pressure point (No.: {} of {} in total) *{} {}*.".format(point_no, points_total,  next_pressure, next_unit))
     
-    return jsonify({'ToExchange':{'Target_pressure.Selected':  float(next_pressure) , 'Target_pressure.Unit': next_unit }})
+    if continue_measurement:  
+        if 'DocPath' in req:
+            doc_path = req.get('DocPath')
+            for line in lines:
+                s.aset("result", line, [{'Type':'target_pressure', 'Value': float(next_pressure), 'Unit':next_unit}])
+                s.aset("doc_path", line, doc_path)
+                db.save_results()
+        else:
+            msg = "missing DocPath"
+            res['error'] = msg
+            s.log.error(msg)
+
+        s.aset('save', 0,  "no" )
+        return jsonify({'ToExchange':{'Target_pressure.Selected':  float(next_pressure) , 'Target_pressure.Unit': next_unit , 'Continue_mesaurement.Bool': continue_measurement}})
+    else:
+        return jsonify({'ToExchange':{'Continue_mesaurement.Bool': continue_measurement}})   
 
 @app.route('/save_dut_branch', methods=['POST'])
 def save_dut_branch():

@@ -12,7 +12,7 @@ class Bot(System):
 
     MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
     RTM_READ_DELAY = 1
-
+    OUT_CHANNEL = "bot"
     def __init__(self):
         super().__init__()
         channel_list = None
@@ -30,7 +30,7 @@ class Bot(System):
             
         if  channel_list and 'channels' in channel_list:
             for channel in channel_list.get('channels'):
-                if channel.get('name') == 'allgemein':
+                if channel.get('name') == 'bot':
                     self.log.info("git info channel id")
                     self.info_channel_id = channel.get('id')
                     break
@@ -56,6 +56,10 @@ class Bot(System):
         if command.startswith('ga'):
             ok = True
             self.post(channel, "calibration gas is {}".format(self.aget('gas',0)))
+        
+        if command.startswith('ch'):
+            ok = True
+            self.post(channel, "I send my infos to channel #{}".format(self.OUT_CHANNEL))
 
         if command.startswith('id'):
             ok = True
@@ -73,7 +77,7 @@ class Bot(System):
 
         if command.startswith('he'):
             ok = True
-            self.post(channel,  "Available commands are *he[lp]* *ga[s]*, *fu[llscales]* or *id[s]*.")
+            self.post(channel, "Available commands are *he[lp]*, *ch[annel]*, *ga[s]*, *fu[llscales]* or *id[s]*.")
 
         if not ok:
             self.post(channel, "Not sure what you mean. Try *help* command.")
