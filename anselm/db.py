@@ -278,7 +278,7 @@ class DB(System):
                 return None
 
     def get_last_target_pressure(self, doc):
-        value = 0
+        value = [0]
         unit = self.unit
         if doc:
             pressure = doc.get('Calibration', {}).get('Measurement', {}).get('Values', {}).get('Pressure')
@@ -293,10 +293,11 @@ class DB(System):
                             ]
 
                     if all(ok):
-                        value = entr.get('Value')[-1]
+                        value = entr.get('Value')
                         unit = entr.get('Unit')
+                        print(value)
         
-        return float(value), unit
+        return float(value[-1]), unit, len(value)
 
     def acc_todo_pressure(self, acc, doc, unit, format_expr='{:.1e}'):
         conv_factor = 1

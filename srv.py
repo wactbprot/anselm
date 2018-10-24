@@ -44,32 +44,31 @@ def target_pressure():
     msg = "http request to */target_pressure* endpoint"
     s.log.info(msg) 
     s.r.publish('info', msg)
-
     req = request.get_json()
-    last_pressure = 0
-    lines = s.get_lines('cal_id')
-    todo_pressures_acc = []
+
+    # start values:
+    last_pressure = 0.0
     repeat_over_rating = 7.0
     continue_measurement = True
-    epsilon = 0.01
-    highest_rating = 0 # start value
+    highest_rating = 0 
+    todo_pressures_acc = []
 
+    lines = s.get_lines('cal_id')
     for line in lines:
         
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
 
         todo_pressures_acc, todo_unit =  db.acc_todo_pressure(todo_pressures_acc, doc, s.unit)
-        test_pressure, test_unit = db.get_last_target_pressure(doc)
+        meas_pressure, meas_unit, meas_points = db.get_last_target_pressure(doc)
 
         last_rating = db.get_last_rating(doc)
         if last_rating and last_rating > highest_rating:
             highest_rating = last_rating
         
-        if  test_pressure >  last_pressure and  test_unit == s.unit:
-            last_pressure = test_pressure
-            last_unit = test_unit
-
+        if  meas_pressure >  last_pressure and  meas_unit == s.unit:
+            last_pressure = meas_pressure
+            last_unit = meas_unit
 
     for todo_pressure in  todo_pressures_acc:
             if float(todo_pressure) > last_pressure:
@@ -77,20 +76,23 @@ def target_pressure():
 
     point_no = todo_pressures_acc.index(todo_pressure) + 1
     points_total = len(todo_pressures_acc)
-    measurement_complete = last_pressure > 0 and last_pressure/float(todo_pressures_acc[-1]) -1 < epsilon
-
+   
+    measurement_complete =  meas_points >= points_total 
+    
     if highest_rating < repeat_over_rating:
         
         if not measurement_complete:
             continue_measurement = True
             # next pressure with ok rating
             next_pressure, next_unit = todo_pressure, todo_unit
+            if point_no > 1:
+                s.r.publish('info', "The previous measurement point has a rating of *{:.1f}* of [0..9].".format(highest_rating))
+                s.r.publish('info', "Proceed with the next pressure point. This will be № {} of {} points in total.".format(point_no, points_total))
 
-            s.r.publish('info', "The last measurement point has a rating of *{}* of [0..9]. This is ok.".format(highest_rating))
-            s.r.publish('info', "Next pressure point (No.: {} of {} in total) will be *{} {}*".format(point_no+1, points_total,  next_pressure, next_unit))
+            s.r.publish( 'info', "The calibration pressure will be *{} {}*.".format(next_pressure, next_unit))
         else:
             continue_measurement = False
-            s.r.publish('info', "The last measurement point has a rating of *{}* of [0..9]. This is ok.".format(highest_rating))
+            s.r.publish('info', "The previous measurement point has a rating of *{:.1f}* of [0..9].".format(highest_rating))
             s.r.publish('info', "It was the *last measurement point*.")
 
     if  highest_rating > repeat_over_rating:
@@ -99,8 +101,8 @@ def target_pressure():
         # next pressure with ok rating not ok
         next_pressure, next_unit = last_pressure, last_unit
 
-        s.r.publish('info', "The last measurement point has a rating of *{}*. This is *not ok*.".format(highest_rating))
-        s.r.publish('info', "Repeat the last pressure point (No.: {} of {} in total) *{} {}*.".format(point_no, points_total,  next_pressure, next_unit))
+        s.r.publish('info', "The previous measurement point has a rating of *{:.1f}*. This is *not ok*.".format(highest_rating))
+        s.r.publish('info', "Repeat the previous pressure point (№ {} of {} in total) *{} {}*.".format(point_no, points_total,  next_pressure, next_unit))
     
     if continue_measurement:  
         s.aset("current_target_pressure", 0, "{} {}".format(next_pressure, next_unit))
