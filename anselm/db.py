@@ -1,6 +1,7 @@
 from anselm.system import System
 import couchdb
 import json
+import numpy as np
 import sys
 
 class DB(System):
@@ -295,30 +296,8 @@ class DB(System):
                     if all(ok):
                         value = entr.get('Value')
                         unit = entr.get('Unit')
-                        print(value)
+                       
         
         return float(value[-1]), unit, len(value)
 
-    def acc_todo_pressure(self, acc, doc, unit, format_expr='{:.1e}'):
-        conv_factor = 1
-        todo_pressure = doc.get('Calibration', {}).get('ToDo',{}).get('Values',{}).get('Pressure', {})
-        ok = [
-                'Unit' in todo_pressure,
-                'Value' in todo_pressure,
-                isinstance(todo_pressure.get('Value'), list),
-                unit == "Pa",
-            ]
-
-        if all(ok):
-            if todo_pressure.get('Unit') == "mbar":
-                conv_factor = 100
-            
-
-            for v in todo_pressure.get('Value'):
-                val = format_expr.format( float(v) * conv_factor )
-                if not val in  acc:
-                    acc.append(val)
-        # sort
-        float_acc = [float(v) for v in acc]
-        acc = [format_expr.format(v) for v in sorted(float_acc)]
-        return acc, unit
+   

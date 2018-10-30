@@ -4,6 +4,7 @@ import time
 import re
 from anselm.system import System
 from anselm.db import DB
+from anselm.utils import Utils
 from slackclient import SlackClient
 # instantiate Slack client
 from _thread import start_new_thread
@@ -18,6 +19,7 @@ class Bot(System):
         super().__init__()
 
         self.db = DB()
+        self.utils = Utils()
 
         channel_list = None
         self.info_channel_id = None
@@ -61,25 +63,54 @@ class Bot(System):
             ok = True
 
             todo_pressures_acc = []
+            todo_n_acc = []
             lines = self.get_lines('cal_id')
             for line in lines:
                 cal_id = self.aget('cal_id', line)
                 doc = self.db.get_doc(cal_id)
-                todo_pressures_acc, todo_unit =  self.db.acc_todo_pressure(todo_pressures_acc, doc, self.unit)
-                meas_pressure, meas_unit, meas_points = self.db.get_last_target_pressure(doc)
+                todo_dict = self.utils.extract_todo_pressure(doc)
+                todo_pressures_acc, todo_n_acc, todo_unit =  self.utils.acc_pressure(todo_dict, todo_pressures_acc, todo_n_acc)
 
             if len(todo_pressures_acc) > 0:
-                self.post(channel, "There are {} todo pressures in total:".format(len(todo_pressures_acc)))
+                self.post(channel, "There are {no} todo pressures in total:".format(no=len(todo_pressures_acc)))
                 for i, p in enumerate(todo_pressures_acc):
-                    if float(meas_pressure) >= float(p):
-                        self.post(channel, "№ {}:         {} {} ✔".format(i+1, p, todo_unit))
-                    else:
-                        self.post(channel, "№ {}:         {} {}".format(i+1, p, todo_unit))
-
+                    self.post(channel, "№ {no}:  {p} {unit} (N = {n})".format(no=i+1,p=p, unit=todo_unit, n=todo_n_acc[i]))
             else:
                 msg = "No calibrations selelected so far."
                 self.post(channel, msg )
+            
+        if command.startswith('re'):
+            ok = True
 
+            todo_pressures_acc = []
+            todo_n_acc = []
+            lines = self.get_lines('cal_id')
+            for line in lines:
+                cal_id = self.aget('cal_id', line)
+                doc = self.db.get_doc(cal_id)
+                todo_dict = self.utils.extract_todo_pressure(doc)
+                todo_pressures_acc, todo_n_acc, unit =  self.utils.acc_pressure(todo_dict, todo_pressures_acc, todo_n_acc)
+            
+            remaining_pressure_acc = []
+            remaining_n_acc = []
+            for line in lines: 
+                cal_id = self.aget('cal_id', line)
+                doc = self.db.get_doc(cal_id)
+                target_dict = self.utils.extract_target_pressure(doc)
+               
+                remaining_pressure, remaining_n, unit =  self.utils.remaining_pressure(target_dict, todo_pressures_acc, todo_n_acc)
+                remaining_dict = {'Value':remaining_pressure, 'N':remaining_n, 'Unit': unit}
+                remaining_pressure_acc, remaining_n_acc , unit = self.utils.acc_pressure(remaining_dict, remaining_pressure_acc, remaining_n_acc)
+            
+            
+            if len(remaining_pressure_acc) > 0:
+                self.post(channel, "There following target pressure(s) remain:".format(no=len(remaining_pressure_acc)))
+                for i, p in enumerate(remaining_pressure_acc):
+                    self.post(channel, "№ {no}:  {p} {unit} (N = {n})".format(no=i+1,p=p, unit=unit, n=remaining_n_acc[i]))
+            else:
+                msg = "There are no remaining target pressures."
+                self.post(channel, msg )
+        
         if command.startswith('cu'):
             ok = True
             p = self.aget('current_target_pressure', 0)
@@ -114,12 +145,10 @@ class Bot(System):
         if command.startswith('he'):
             ok = True
             self.post(channel, "Beside *he[lp]* further available commands are:")
-            self.post(channel, "*to[do pressure]*, *cu[rrent target pressure]*, *ch[annel]*, *ga[s]*, *fu[llscales]* or *id[s]*.")
+            self.post(channel, "*to[do pressure]*, *re[maining pressures]*, *cu[rrent target pressure]*, *ch[annel]*, *ga[s]*, *fu[llscales]* or *id[s]*.")
 
         if not ok:
             self.post(channel, "Not sure what you mean. Try *help* command.")
-
-
 
     def post(self, channel, msg):
 

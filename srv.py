@@ -59,7 +59,10 @@ def target_pressure():
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
 
-        todo_pressures_acc, todo_unit =  db.acc_todo_pressure(todo_pressures_acc, doc, s.unit)
+        todo_dict = db.extract_todo_pressure(doc)
+        todo_pressures_acc, todo_unit, todo_n_acc = acc_todo_pressure(todo_dict, todo_pressures_acc, todo_n_acc)
+
+        target_pressures_acc, target_unit, target_n_acc=  db.acc_target_pressure(target_pressures_acc, doc, s.unit)
         meas_pressure, meas_unit, meas_points = db.get_last_target_pressure(doc)
 
         last_rating = db.get_last_rating(doc)

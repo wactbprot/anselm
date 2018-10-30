@@ -38,6 +38,7 @@ setup(
                     'redis',
                     'flask',
                     'requests',
+                    'numpy',
                     ],
     #extras_require={
     #    'dev': ['sphinx',
