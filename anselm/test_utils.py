@@ -135,42 +135,17 @@ class TestDB(unittest.TestCase):
     
     def test_remaining_pressure_1(self):
         """should return remaining pressures
-        """
-        todo_dict = { "Type": "target", 
-                      "Value": [
-                                "1.3", "0.13", "0.00013", "0.0013","0.013",
-                                ],
-                       "N": [
-                            1,1,1,1,1
-                            ],
-                       "Unit": "mbar"
-                     }
-         
-        target_dict = { "Type": "target_pressure", 
-                      "Value": [
-                                 0.013, 0.13, 1.3
-                                ],
-                       
-                       "Unit": "Pa"
-                     }           
-        v, n, u = self.utils.acc_pressure(todo_dict, [], [])
-        w, m, u = self.utils.remaining_pressure(target_dict, v,n)
         
-        self.assertEqual(u, 'Pa')  
-        self.assertEqual(len(w), len(m))
-        self.assertEqual(len(w), 2)
-        self.assertEqual(w[0], "1.3e+01")
-        self.assertEqual(w[1], "1.3e+02")
+        refactored
 
-    def test_remaining_pressure_2(self):
-        """should return remaining pressures count n
+
         """
         todo_dict = { "Type": "target", 
                       "Value": [
                                 "1.3", "0.13", "0.00013", "0.0013","0.013",
                                 ],
                        "N": [
-                            2,2,2,2,2
+                            1,1,2,1,2
                             ],
                        "Unit": "mbar"
                      }
@@ -183,16 +158,12 @@ class TestDB(unittest.TestCase):
                        "Unit": "Pa"
                      }           
         v, n, u = self.utils.acc_pressure(todo_dict, [], [])
-        w, m, u = self.utils.remaining_pressure(target_dict, v,n)
-        print(w)
-        print(m)
+        w, u = self.utils.remaining_pressure(target_dict, v,n)
+
+        print(w)        
         self.assertEqual(u, 'Pa')  
-        self.assertEqual(len(w), len(m))
-        self.assertEqual(len(w), 5)
-        self.assertEqual(w[0], "1.3e-02")
-        self.assertEqual(w[1], "1.3e-01")
-        self.assertEqual(m[1], 1)
-        self.assertEqual(m[1], 1)
-        self.assertEqual(m[2], 1)
-        self.assertEqual(m[3], 2)
-        self.assertEqual(m[4], 2)
+        self.assertEqual(len(w), 4)
+        self.assertEqual(w[0], '1.3e-02')
+        self.assertEqual(w[1], '1.3e+00')
+        self.assertEqual(w[2], '1.3e+01')
+        self.assertEqual(w[3], '1.3e+02')

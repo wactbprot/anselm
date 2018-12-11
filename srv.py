@@ -2,12 +2,14 @@ from flask import Flask, jsonify, request
 from anselm.system import System
 from anselm.db import DB
 from anselm.worker import Worker
+from anselm.utils import Utils
 from _thread import start_new_thread
 import time
 
 app = Flask(__name__)
 s = System()
 db = DB()
+utils = Utils()
 
 @app.route('/')
 def home():
@@ -52,45 +54,42 @@ def target_pressure():
     continue_measurement = True
     highest_rating = 0 
     todo_pressures_acc = []
+    target_pressures_acc = []
+    n_todo = []
+    n_target = []
 
     lines = s.get_lines('cal_id')
+
     for line in lines:
-        
         cal_id = s.aget('cal_id', line)
         doc = db.get_doc(cal_id)
 
-        todo_dict = db.extract_todo_pressure(doc)
-        todo_pressures_acc, todo_unit, todo_n_acc = acc_todo_pressure(todo_dict, todo_pressures_acc, todo_n_acc)
-
-        target_pressures_acc, target_unit, target_n_acc=  db.acc_target_pressure(target_pressures_acc, doc, s.unit)
-        meas_pressure, meas_unit, meas_points = db.get_last_target_pressure(doc)
+        todo_dict = utils.extract_todo_pressure(doc)
+        todo_pressures_acc, n_todo, todo_unit = utils.acc_pressure(value_dict=todo_dict,form_pressure_acc=todo_pressures_acc, n_acc=n_todo)
 
         last_rating = db.get_last_rating(doc)
         if last_rating and last_rating > highest_rating:
             highest_rating = last_rating
+
+        last_measured_pressure, last_measured_unit = db.get_last_target_pressure(doc)
+        if  last_pressure < last_measured_pressure:
+            last_pressure = last_measured_pressure
         
-        if  meas_pressure >  last_pressure and  meas_unit == s.unit:
-            last_pressure = meas_pressure
-            last_unit = meas_unit
-
-    for todo_pressure in  todo_pressures_acc:
-            if float(todo_pressure) > last_pressure:
-                break
-
-    point_no = todo_pressures_acc.index(todo_pressure) + 1
-    points_total = len(todo_pressures_acc)
+    
+    target_dict = utils.extract_target_pressure(doc)
+    remaining_pressures, remaining_unit =  utils.remaining_pressure(target_dict, todo_pressures_acc, n_todo)
+    
    
-    measurement_complete =  meas_points >= points_total 
+    measurement_complete = len(remaining_pressures) == 0
     
     if highest_rating < repeat_over_rating:
         
         if not measurement_complete:
             continue_measurement = True
             # next pressure with ok rating
-            next_pressure, next_unit = todo_pressure, todo_unit
-            if point_no > 1:
-                s.r.publish('info', "The previous measurement point has a rating of *{:.1f}* of [0..9].".format(highest_rating))
-                s.r.publish('info', "Proceed with the next pressure point. This will be № {} of {} points in total.".format(point_no, points_total))
+            next_pressure, next_unit = remaining_pressures[0], remaining_unit
+            s.r.publish('info', "The previous measurement point has a rating of *{:.1f}* of [0..9].".format(highest_rating))
+            s.r.publish('info', "Proceed with the next pressure point.")
 
             s.r.publish( 'info', "The calibration pressure will be *{} {}*.".format(next_pressure, next_unit))
         else:
@@ -102,10 +101,10 @@ def target_pressure():
         continue_measurement = True
 
         # next pressure with ok rating not ok
-        next_pressure, next_unit = last_pressure, last_unit
+        next_pressure, next_unit = last_pressure, last_pressure_unit
 
         s.r.publish('info', "The previous measurement point has a rating of *{:.1f}*. This is *not ok*.".format(highest_rating))
-        s.r.publish('info', "Repeat the previous pressure point (№ {} of {} in total) *{} {}*.".format(point_no, points_total,  next_pressure, next_unit))
+        s.r.publish('info', "Repeat the previous pressure point ")
     
     if continue_measurement:  
         s.aset("current_target_pressure", 0, "{} {}".format(next_pressure, next_unit))
@@ -328,12 +327,15 @@ def target_pressures():
         }
 
     target_pressure = []
+    n=[]
     lines = s.get_lines('cal_id')
     for line in lines:
 
         cal_id = s.aget('cal_id', line)
-        doc = db.get_doc(cal_id)
-        target_pressure, unit = db.acc_todo_pressure(doc=doc, acc=target_pressure, unit=s.unit)
+        doc = db.get_doc(cal_id) 
+        value_dict = utils.extract_todo_pressure(doc)
+        print(value_dict)
+        target_pressure, n, unit = utils.acc_pressure(value_dict=value_dict,  form_pressure_acc=target_pressure, n_acc=n)
 
     if len(target_pressure) > 0:
         for value in target_pressure:

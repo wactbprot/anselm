@@ -15,7 +15,6 @@ class Utils(System):
         pressure = doc.get('Calibration', {}).get('Measurement',{}).get('Values',{}).get('Pressure')
         if pressure:
             for i, p in enumerate(pressure):
-                print(p)
                 if p.get('Type', '') == p_type:
                     break
             return p
@@ -76,24 +75,19 @@ class Utils(System):
             self.log.error("value_dict is unsufficient {ok}".format(ok=ok))          
         return form_pressure_acc, n_acc, self.unit
 
-    def remaining_pressure(self, value_dict, form_pressure_acc, n_acc):
-        ok = ['Unit' in value_dict,
-              'Value' in value_dict,
-              isinstance(value_dict.get('Value'), list),
+    def remaining_pressure(self, already_measured_dict, todo_pressure_acc, n_acc):
+        ok = ['Unit' in already_measured_dict,
+              'Value' in already_measured_dict,
+              isinstance(already_measured_dict.get('Value'), list),
              ]
         remaining_pressure = []
         remaining_n = []
         if all(ok):
-            form_pressure = self.ensure_format( self.get_value( value_dict , self.unit))
-            for i, form_value in enumerate(form_pressure_acc):
-                if not form_value in  form_pressure:
-                    remaining_pressure.append(form_value)
-                    remaining_n.append(n_acc[i])
-                else:
-                    n = form_pressure.count(form_value)
-                    d = n_acc[i] - n
-                    if d > 0:
-                        remaining_pressure.append(form_value)
-                        remaining_n.append(d)
-
-        return remaining_pressure, remaining_n, self.unit
+            measured_pressure = self.ensure_format( self.get_value( already_measured_dict , self.unit))
+            for i, todo_value in enumerate(todo_pressure_acc):
+                todo_value_measured_n = measured_pressure.count(todo_value)
+                if  todo_value_measured_n < n_acc[i]:
+                    for k in range(1, n_acc[i]+1 - todo_value_measured_n):
+                        remaining_pressure.append(todo_value)
+                
+        return remaining_pressure,  self.unit

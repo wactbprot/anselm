@@ -298,6 +298,6 @@ class DB(System):
                         unit = entr.get('Unit')
                        
         
-        return float(value[-1]), unit, len(value)
+        return float(value[-1]), unit
 
    
